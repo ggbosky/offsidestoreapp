@@ -27,6 +27,8 @@ export const DEFAULT_SETTINGS: Settings = {
   includedChars: 3,
   extraCharPrice: 12,
   maxChars: 12,
+  autoTrends: 'off',
+  trendFocus: '',
 };
 
 const now = () => new Date().toISOString();
@@ -233,5 +235,8 @@ export function createSeedData(opts: { empty?: boolean } = {}): AppData {
     keyDates: seedKeyDates(),
     contacts: opts.empty ? [] : seedContacts(),
     settings: { ...DEFAULT_SETTINGS },
+    trendIdeas: [],
+    trendBrief: null,
+    shopify: null,
   };
 }

@@ -54,5 +54,8 @@ export function parseBackup(raw: string): AppData {
     keyDates: arr(data.keyDates, base.keyDates),
     contacts: arr(data.contacts, []),
     settings: { ...base.settings, ...(data.settings ?? {}) },
+    trendIdeas: arr(data.trendIdeas, []),
+    trendBrief: data.trendBrief ?? null,
+    shopify: data.shopify ?? null,
   };
 }

@@ -1,5 +1,7 @@
 import { useRef, useState, type FormEvent, type ReactNode } from 'react';
-import { CalendarHeart, Database, Download, KeyRound, Plus, RotateCcw, Shield, Tag, Trash2, Upload, Users } from 'lucide-react';
+import { CalendarHeart, CheckCircle2, Circle, Database, Download, KeyRound, Loader2, Plug, Plus, RotateCcw, Shield, Tag, Trash2, Upload, Users } from 'lucide-react';
+import { useIntegrations } from '../../store/integrations';
+import { refreshShopify } from '../shopify/ShopifyPanel';
 import { useData, getAppData } from '../../store/data';
 import { Field, NumberInput } from '../../components/ui';
 import { LaceDot } from '../../components/BraceletGraphic';
@@ -30,6 +32,7 @@ export function SettingsPage() {
     <div className="space-y-6">
       <h1 className="h-display text-3xl">Nastavení</h1>
       <div className="grid gap-6 lg:grid-cols-2">
+        <IntegrationsSection />
         <DataSection />
         <SecuritySection />
         <KeyDatesSection />
@@ -301,6 +304,76 @@ function ClubsSection() {
           <RotateCcw size={16} /> Obnovit kluby z webu
         </button>
       </div>
+    </Section>
+  );
+}
+
+function IntegrationsSection() {
+  const { status, serverError, loadStatus } = useIntegrations();
+  const [busy, setBusy] = useState(false);
+  const rows = [
+    { name: 'Claude (hledání trendů a nápady)', ok: status?.anthropic.configured, detail: status ? `model ${status.anthropic.model}` : '' },
+    { name: 'Shopify (objednávky, produkty, stálí zákazníci)', ok: status?.shopify.configured, detail: status?.shopify.store ? `${status.shopify.store} · ${status.shopify.mode === 'admin_token' ? 'token z adminu' : 'Dev Dashboard'}` : '' },
+    { name: 'Gemini (úprava fotek)', ok: status?.gemini.configured, detail: status ? `model ${status.gemini.model}` : '' },
+  ];
+
+  async function verify() {
+    setBusy(true);
+    await loadStatus();
+    const st = useIntegrations.getState().status;
+    if (st?.shopify.configured) {
+      try {
+        const s = await refreshShopify();
+        toast(`Shopify funguje: ${s.orders} objednávek za ${s.days} dní.`);
+      } catch (e) {
+        toast((e as Error).message, 'error');
+      }
+    } else if (st) toast('Stav propojení načten.', 'info');
+    setBusy(false);
+  }
+
+  return (
+    <Section icon={<Plug size={20} />} title="Propojení" className="lg:col-span-2">
+      {serverError ? (
+        <p className="rounded-xl bg-warn/10 p-3 text-sm text-warn">{serverError}</p>
+      ) : (
+        <ul className="grid gap-2 md:grid-cols-3">
+          {rows.map((r) => (
+            <li key={r.name} className={`flex items-start gap-2 rounded-xl border p-3 ${r.ok ? 'border-ok/30 bg-ok/[0.05]' : 'border-line bg-surface-2'}`}>
+              {r.ok ? <CheckCircle2 size={18} className="mt-0.5 shrink-0 text-ok" /> : <Circle size={18} className="mt-0.5 shrink-0 text-faint" />}
+              <span>
+                <span className="block font-bold">{r.name}</span>
+                <span className="text-xs text-faint">{r.ok ? r.detail : 'Nepropojeno'}</span>
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+      <button className="btn-ghost" onClick={verify} disabled={busy}>
+        {busy ? <Loader2 size={15} className="animate-spin" /> : <RotateCcw size={15} />} Ověřit propojení
+      </button>
+      <details className="rounded-xl border border-line bg-bg/50 p-4 text-sm text-muted">
+        <summary className="cursor-pointer font-bold text-white">Jak propojit (5 minut)</summary>
+        <ol className="mt-3 list-decimal space-y-2 pl-5">
+          <li>
+            Ve složce aplikace zkopíruj <code>.env.example</code> jako <code>.env</code>. Klíče patří jen sem – zůstanou v tvém PC a do prohlížeče se nedostanou.
+          </li>
+          <li>
+            <b className="text-white">Claude:</b> na platform.claude.com → API Keys vytvoř klíč a vlož ho do <code>ANTHROPIC_API_KEY</code>.
+          </li>
+          <li>
+            <b className="text-white">Shopify:</b> v adminu Nastavení → Aplikace → Vývoj aplikací → vytvoř aplikaci v Dev Dashboardu. V konfiguraci zapni oprávnění
+            <code> read_orders</code>, <code>read_products</code> (a volitelně <code>read_customers</code> + přístup k chráněným zákaznickým datům pro import stálých zákazníků), vydej verzi a nainstaluj ji do obchodu.
+            Do .env vlož <code>SHOPIFY_STORE</code> (část adresy před .myshopify.com), <code>SHOPIFY_CLIENT_ID</code> a <code>SHOPIFY_CLIENT_SECRET</code>. Máš-li starší aplikaci s tokenem <code>shpat_…</code>, stačí <code>SHOPIFY_ADMIN_TOKEN</code>.
+          </li>
+          <li>
+            <b className="text-white">Gemini:</b> na aistudio.google.com → Get API key a vlož do <code>GEMINI_API_KEY</code>.
+          </li>
+          <li>
+            Restartuj aplikaci (<code>npm run dev</code>) a klikni na „Ověřit propojení“.
+          </li>
+        </ol>
+      </details>
     </Section>
   );
 }

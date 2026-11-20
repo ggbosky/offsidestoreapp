@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type { Bracelet, Contact, ContentItem } from '../types';
 
-export type TabId = 'dashboard' | 'content' | 'crm' | 'bracelets' | 'generator' | 'settings';
+export type TabId = 'dashboard' | 'trends' | 'content' | 'crm' | 'bracelets' | 'generator' | 'settings';
 
 /** Stav rozhraní: aktivní záložka a otevřené editory (sdílené napříč stránkami). */
 interface UiState {
@@ -17,7 +17,10 @@ interface UiState {
 
 export const useUi = create<UiState>((set) => ({
   tab: 'dashboard',
-  setTab: (tab) => set({ tab }),
+  setTab: (tab) => {
+    set({ tab });
+    if (typeof window !== 'undefined') window.scrollTo({ top: 0 });
+  },
   content: null,
   contact: null,
   bracelet: null,

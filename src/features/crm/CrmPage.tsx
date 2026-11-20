@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react';
-import { AlarmClock, Columns3, List, Plus, Search } from 'lucide-react';
+import { AlarmClock, Columns3, Download, List, Plus, Search } from 'lucide-react';
+import { importRepeatCustomers } from '../../lib/shopifySync';
+import { toast } from '../../store/toast';
 import type { Contact, ContactKind, CrmStage } from '../../types';
 import { useData, newContact } from '../../store/data';
 import { useUi } from '../../store/ui';
@@ -11,6 +13,8 @@ export function CrmPage() {
   const contacts = useData((s) => s.contacts);
   const clubs = useData((s) => s.clubs);
   const openContact = useUi((s) => s.openContact);
+  const shopify = useData((s) => s.shopify);
+  const saveContact = useData((s) => s.saveContact);
   const [view, setView] = useState<'board' | 'list'>('board');
   const [q, setQ] = useState('');
   const [kind, setKind] = useState<ContactKind | null>(null);
@@ -47,6 +51,19 @@ export function CrmPage() {
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-faint" />
           <input className="input rounded-full pl-9" placeholder="Jméno, @účet, poznámka…" value={q} onChange={(e) => setQ(e.target.value)} />
         </div>
+        {shopify?.repeatCustomers && shopify.repeatCustomers.length > 0 && (
+          <button
+            className="btn-ghost"
+            title="Stálí zákazníci (2+ objednávky) jako kandidáti na ambasadory"
+            onClick={() => {
+              const fresh = importRepeatCustomers(shopify.repeatCustomers!, contacts);
+              fresh.forEach(saveContact);
+              toast(fresh.length ? `Importováno ${fresh.length} stálých zákazníků do fáze „Tip“.` : 'Všichni stálí zákazníci už v kontaktech jsou.', 'info');
+            }}
+          >
+            <Download size={16} /> Stálí zákazníci ze Shopify
+          </button>
+        )}
         <button className="btn-primary" onClick={() => openContact(newContact())}>
           <Plus size={17} /> Kontakt
         </button>

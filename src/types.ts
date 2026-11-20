@@ -1,3 +1,5 @@
+import type { ShopifySummary, TrendIdea } from './lib/integrations';
+
 // ───────── Kluby a náramky ─────────
 
 export interface Club {
@@ -116,6 +118,17 @@ export interface Settings {
   includedChars: number;
   extraCharPrice: number;
   maxChars: number;
+  /** Automatické hledání trendů při otevření aplikace (stojí kredit Claude API) */
+  autoTrends: 'off' | 'daily';
+  /** Výchozí zaměření hledání trendů */
+  trendFocus: string;
+}
+
+export interface TrendBrief {
+  text: string;
+  sources: Array<{ title: string; url: string }>;
+  at: string;
+  focus: string;
 }
 
 export interface AppData {
@@ -126,4 +139,7 @@ export interface AppData {
   keyDates: KeyDate[];
   contacts: Contact[];
   settings: Settings;
+  trendIdeas: TrendIdea[];
+  trendBrief: TrendBrief | null;
+  shopify: ShopifySummary | null;
 }

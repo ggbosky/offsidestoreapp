@@ -1,14 +1,16 @@
 import { useState } from 'react';
-import { CalendarPlus, Plus } from 'lucide-react';
+import { CalendarPlus, Download, Plus } from 'lucide-react';
+import { syncBraceletsFromProducts } from '../../lib/shopifySync';
+import { toast } from '../../store/toast';
 import type { BraceletStatus } from '../../types';
-import { useData, newBracelet, newContent } from '../../store/data';
+import { useData, newBracelet, newContent, getAppData } from '../../store/data';
 import { useUi } from '../../store/ui';
 import { BraceletGraphic, LaceDot } from '../../components/BraceletGraphic';
 import { BRACELET_STATUS } from '../../lib/meta';
 import { laceName } from '../../config';
 
 export function BraceletsPage() {
-  const { bracelets, clubs, content } = useData();
+  const { bracelets, clubs, content, shopify, replaceAll } = useData();
   const { openBracelet, openContent } = useUi();
   const [status, setStatus] = useState<BraceletStatus | null>(null);
   const list = bracelets.filter((b) => (status ? b.status === status : b.status !== 'archiv'));
@@ -18,7 +20,20 @@ export function BraceletsPage() {
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="h-display mr-2 text-3xl">Náramky</h1>
         <p className="text-sm text-muted">Knihovna designů a nápadů na nové kolekce – k propojení s obsahem.</p>
-        <button className="btn-primary ml-auto" onClick={() => openBracelet(newBracelet())}>
+        {shopify && shopify.products.length > 0 && (
+          <button
+            className="btn-ghost ml-auto"
+            title="Doplní fotky a stav z produktů v Shopify"
+            onClick={() => {
+              const r = syncBraceletsFromProducts(shopify.products, bracelets, clubs);
+              replaceAll({ ...getAppData(), bracelets: r.bracelets });
+              toast(`Ze Shopify: ${r.updated} aktualizováno, ${r.added} přidáno.`);
+            }}
+          >
+            <Download size={16} /> Fotky ze Shopify
+          </button>
+        )}
+        <button className={`btn-primary ${shopify && shopify.products.length > 0 ? '' : 'ml-auto'}`} onClick={() => openBracelet(newBracelet())}>
           <Plus size={17} /> Design / nápad
         </button>
       </div>

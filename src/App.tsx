@@ -15,12 +15,27 @@ import { BraceletsPage } from './features/bracelets/BraceletsPage';
 import { BraceletEditor } from './features/bracelets/BraceletEditor';
 import { GeneratorPage } from './features/generator/GeneratorPage';
 import { SettingsPage } from './features/settings/SettingsPage';
+import { TrendsPage } from './features/trends/TrendsPage';
+import { useIntegrations } from './store/integrations';
+import { runTrendSearch } from './features/trends/runSearch';
 
 export default function App() {
   const unlocked = useLock((s) => s.unlocked);
   const lock = useLock((s) => s.lock);
   const autoLock = useData((s) => s.settings.autoLockMinutes);
   const tab = useUi((s) => s.tab);
+
+  // Po odemčení zjistit stav propojení; při zapnutém hlídání 1× denně najít nové trendy.
+  useEffect(() => {
+    if (!unlocked) return;
+    const integrations = useIntegrations.getState();
+    integrations.loadStatus().then(() => {
+      const { settings, trendBrief } = useData.getState();
+      const ready = useIntegrations.getState().status?.anthropic.configured;
+      const stale = !trendBrief || Date.now() - Date.parse(trendBrief.at) > 20 * 3_600_000;
+      if (ready && settings.autoTrends === 'daily' && stale) runTrendSearch(settings.trendFocus, { silent: true });
+    });
+  }, [unlocked]);
 
   // Automatické zamčení po nečinnosti
   useEffect(() => {
@@ -65,6 +80,7 @@ export default function App() {
       <Header />
       <main className="mx-auto max-w-[1480px] px-4 pb-20 pt-7 sm:px-6">
         {tab === 'dashboard' && <DashboardPage />}
+        {tab === 'trends' && <TrendsPage />}
         {tab === 'content' && <ContentPage />}
         {tab === 'crm' && <CrmPage />}
         {tab === 'bracelets' && <BraceletsPage />}

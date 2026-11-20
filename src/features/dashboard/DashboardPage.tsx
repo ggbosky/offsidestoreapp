@@ -8,9 +8,13 @@ import { CRM_STAGES, PILLARS, crmStage } from '../../lib/meta';
 import { PillarTag, PlatformTags } from '../content/bits';
 import { toast } from '../../store/toast';
 import type { ContentPillar } from '../../types';
+import { ShopifyPanel } from '../shopify/ShopifyPanel';
+import { isExpired } from '../trends/ideaToContent';
+import { Flame } from 'lucide-react';
 
 export function DashboardPage() {
-  const { content, contacts, keyDates, setContentStage, saveContact } = useData();
+  const { content, contacts, keyDates, setContentStage, saveContact, trendIdeas } = useData();
+  const hot = trendIdeas.filter((i) => i.status === 'novy' && !isExpired(i)).slice(0, 3);
   const { openContent, openContact, setTab } = useUi();
   const t = today();
 
@@ -164,6 +168,24 @@ export function DashboardPage() {
           </div>
         </section>
       </div>
+
+      {/* Horké trendy */}
+      {hot.length > 0 && (
+        <section className="card p-5">
+          <Head icon={<Flame size={18} />} title="Horké trendy – teď nebo nikdy" action={() => setTab('trends')} actionLabel="Radar" />
+          <div className="grid gap-3 lg:grid-cols-3">
+            {hot.map((i) => (
+              <button key={i.id} onClick={() => setTab('trends')} className="rounded-xl border border-line bg-surface-2 p-4 text-left transition hover:border-brand/60">
+                <div className="text-[11px] font-extrabold uppercase tracking-wider text-brand">{i.format}</div>
+                <div className="mt-1 font-extrabold leading-snug">{i.trend}</div>
+                <div className="mt-1 line-clamp-2 text-sm text-muted">{i.concept}</div>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
+
+      <ShopifyPanel />
 
       {/* Týden */}
       <section className="card p-5">

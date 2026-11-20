@@ -1,4 +1,4 @@
-import { CalendarDays, Gauge, Gem, Lock, Save, Settings, Sparkles, Users } from 'lucide-react';
+import { CalendarDays, Flame, Gauge, Gem, Lock, Save, Settings, Sparkles, Users } from 'lucide-react';
 import { Logo } from './Logo';
 import { useData, getAppData } from '../store/data';
 import { useLock } from '../store/lock';
@@ -9,6 +9,7 @@ import { toast } from '../store/toast';
 
 const TABS: Array<{ id: TabId; label: string; icon: typeof Gauge }> = [
   { id: 'dashboard', label: 'Přehled', icon: Gauge },
+  { id: 'trends', label: 'Trendy', icon: Flame },
   { id: 'content', label: 'Obsah', icon: CalendarDays },
   { id: 'crm', label: 'Kontakty', icon: Users },
   { id: 'bracelets', label: 'Náramky', icon: Gem },
@@ -27,8 +28,10 @@ export function Header() {
   const content = useData((s) => s.content);
   const contacts = useData((s) => s.contacts);
   const att = attentionCount({ content, contacts });
+  const freshTrends = useData((s) => s.trendIdeas.filter((i) => i.status === 'novy' && Date.now() < Date.parse(i.createdAt) + i.shelfLifeDays * 86_400_000).length);
 
   const badge = (id: TabId) => {
+    if (id === 'trends' && freshTrends) return <span className="rounded-full bg-white px-1.5 text-[11px] font-extrabold leading-5 text-bg">{freshTrends}</span>;
     const n = id === 'content' ? att.content : id === 'crm' ? att.contacts : 0;
     return n ? <span className="rounded-full bg-brand px-1.5 text-[11px] font-extrabold leading-5 text-white">{n}</span> : null;
   };

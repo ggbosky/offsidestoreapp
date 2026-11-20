@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
-import type { AppData, Bracelet, Club, Contact, ContentItem, ContentStage, CrmStage, Interaction, KeyDate, Settings } from '../types';
+import type { AppData, Bracelet, Club, Contact, ContentItem, ContentStage, CrmStage, Interaction, KeyDate, Settings, TrendBrief } from '../types';
+import type { ShopifySummary, TrendIdea } from '../lib/integrations';
 import { createSeedData } from '../data/seed';
 import { uid } from '../lib/id';
 import { today } from '../lib/dates';
@@ -79,6 +80,11 @@ interface Actions {
   saveKeyDate: (k: KeyDate) => void;
   deleteKeyDate: (id: string) => void;
 
+  setShopify: (s: ShopifySummary | null) => void;
+  addTrendResults: (brief: TrendBrief, ideas: TrendIdea[]) => void;
+  setTrendStatus: (id: string, status: TrendIdea['status']) => void;
+  clearDismissedTrends: () => void;
+
   updateSettings: (patch: Partial<Settings>) => void;
   replaceAll: (data: AppData) => void;
   resetDemo: () => void;
@@ -91,8 +97,8 @@ const upsert = <T extends { id: string }>(list: T[], item: T): T[] =>
   list.some((x) => x.id === item.id) ? list.map((x) => (x.id === item.id ? item : x)) : [...list, item];
 
 export function pickData(s: AppData): AppData {
-  const { schemaVersion, clubs, bracelets, content, keyDates, contacts, settings } = s;
-  return { schemaVersion, clubs, bracelets, content, keyDates, contacts, settings };
+  const { schemaVersion, clubs, bracelets, content, keyDates, contacts, settings, trendIdeas, trendBrief, shopify } = s;
+  return { schemaVersion, clubs, bracelets, content, keyDates, contacts, settings, trendIdeas, trendBrief, shopify };
 }
 
 export const useData = create<DataStore>()(
@@ -144,6 +150,12 @@ export const useData = create<DataStore>()(
       saveKeyDate: (k) => set((s) => ({ keyDates: upsert(s.keyDates, k).sort((a, b) => a.date.localeCompare(b.date)) })),
       deleteKeyDate: (id) => set((s) => ({ keyDates: s.keyDates.filter((k) => k.id !== id) })),
 
+      setShopify: (shopify) => set({ shopify }),
+      addTrendResults: (trendBrief, ideas) =>
+        set((s) => ({ trendBrief, trendIdeas: [...ideas, ...s.trendIdeas.filter((i) => i.status !== 'novy' || Date.now() - Date.parse(i.createdAt) < 3 * 86_400_000)].slice(0, 120) })),
+      setTrendStatus: (id, status) => set((s) => ({ trendIdeas: s.trendIdeas.map((i) => (i.id === id ? { ...i, status } : i)) })),
+      clearDismissedTrends: () => set((s) => ({ trendIdeas: s.trendIdeas.filter((i) => i.status !== 'zahozeno') })),
+
       updateSettings: (patch) => set((s) => ({ settings: { ...s.settings, ...patch } })),
       replaceAll: (data) => set({ ...data }),
       resetDemo: () => {
@@ -158,6 +170,11 @@ export const useData = create<DataStore>()(
       version: 2,
       storage: createJSONStorage(() => localStorage),
       partialize: (s) => pickData(s),
+      // starší uložená data doplní o nové sekce a nastavení
+      merge: (persisted, current) => {
+        const p = (persisted ?? {}) as Partial<AppData>;
+        return { ...current, ...p, settings: { ...current.settings, ...(p.settings ?? {}) } };
+      },
     },
   ),
 );
