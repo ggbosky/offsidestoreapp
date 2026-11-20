@@ -1,0 +1,71 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Akcent jako "R G B" – přepisuje se za běhu z Nastavení */
+  --accent: 0 180 216;
+  color-scheme: dark;
+}
+
+@layer base {
+  html, body, #root { height: 100%; }
+  body {
+    @apply bg-ice-950 text-ink font-sans antialiased;
+    font-feature-settings: 'tnum' 1, 'cv11' 1;
+  }
+  ::selection { background: rgb(var(--accent) / 0.35); }
+  input, select, textarea { @apply text-ink; }
+  input[type='number']::-webkit-inner-spin-button { opacity: 0.4; }
+  :focus-visible { outline: 2px solid rgb(var(--accent)); outline-offset: 2px; }
+  * { scrollbar-width: thin; scrollbar-color: #2E3542 transparent; }
+}
+
+@layer components {
+  /* Ledová plocha: jemné stopy bruslí + mrazivé světlo shora */
+  .ice-bg {
+    background-color: #0D0F12;
+    background-image:
+      radial-gradient(1200px 500px at 15% -10%, rgb(var(--accent) / 0.10), transparent 60%),
+      radial-gradient(900px 400px at 100% 0%, rgba(202, 240, 248, 0.05), transparent 60%),
+      repeating-linear-gradient(-28deg, rgba(255,255,255,0.012) 0 1px, transparent 1px 46px),
+      repeating-linear-gradient(17deg, rgba(255,255,255,0.010) 0 1px, transparent 1px 63px);
+  }
+  /* Pruh připomínající splétanou tkaničku */
+  .lace-stripe {
+    height: 3px;
+    background-image: repeating-linear-gradient(115deg, rgb(var(--accent)) 0 6px, rgba(245,247,250,0.85) 6px 9px, rgb(var(--accent) / 0.55) 9px 15px);
+  }
+  /* Kovový povrch (koncovky) */
+  .metal {
+    background-image: linear-gradient(180deg, #F4F6F8 0%, #B9C0C9 38%, #7D8590 52%, #D7DCE2 78%, #9AA2AC 100%);
+  }
+  .card {
+    @apply bg-ice-900 rounded-2xl border border-white/[0.06] shadow-card;
+  }
+  .input {
+    @apply w-full rounded-xl bg-ice-950/80 border border-white/10 px-3 py-2.5 text-sm placeholder:text-ink-faint
+      focus:border-accent/70 focus:outline-none focus:ring-2 focus:ring-accent/25 transition;
+  }
+  .label {
+    @apply block text-xs font-medium uppercase tracking-wider text-ink-muted mb-1.5;
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition
+      disabled:opacity-40 disabled:cursor-not-allowed select-none;
+  }
+  .btn-primary { @apply btn bg-accent text-ice-950 hover:brightness-110 active:brightness-95 shadow-glow; }
+  .btn-ghost { @apply btn bg-white/[0.04] text-ink hover:bg-white/[0.09] border border-white/10; }
+  .btn-danger { @apply btn bg-danger/15 text-danger hover:bg-danger/25 border border-danger/30; }
+  .btn-icon { @apply inline-flex items-center justify-center rounded-lg p-2 text-ink-muted hover:text-ink hover:bg-white/[0.07] transition; }
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold border transition;
+  }
+  .section-title { @apply font-display text-lg font-semibold uppercase tracking-wide text-ink; }
+}
+
+/* Fullscreen braiding mode – obří písmo */
+.braid-char {
+  font-size: clamp(3rem, min(11vw, 20vh), 12rem);
+  line-height: 1;
+}
