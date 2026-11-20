@@ -1,118 +1,129 @@
-export type OrderStatus = 'new' | 'braiding' | 'ready' | 'shipped';
-
-export type SalesChannel = 'web' | 'instagram' | 'tiktok' | 'osobne' | 'jine';
-
-export type EndcapFinish = 'silver' | 'black' | 'gold' | 'rose';
-
-/** Zásoba tkaniček jedné barevné kombinace (klubové nebo obecné). */
-export interface LaceStock {
-  id: string;
-  name: string;
-  /** 1–3 barvy (hex), které se v náramku střídají. */
-  colors: string[];
-  /** Zásoba v centimetrech. */
-  stockCm: number;
-  /** Spotřeba na jeden náramek (cm). */
-  cmPerBracelet: number;
-  /** Limit – pod tento počet náramků se zobrazí červené upozornění. */
-  minBracelets: number;
-}
-
-export interface CharStock {
-  char: string;
-  qty: number;
-}
-
-export interface EndcapStock {
-  id: string;
-  name: string;
-  finish: EndcapFinish;
-  /** Počet kusů koncovek. */
-  qty: number;
-  minQty: number;
-}
+// ───────── Kluby a náramky ─────────
 
 export interface Club {
   id: string;
+  /** Plný název, např. HC VERVA LITVÍNOV */
   name: string;
-  /** Zkratka pro náhledy, např. LIT, SPA. */
+  /** Krátký název pro texty, např. Litvínov */
   short: string;
-  /** Výchozí tkanička (barevná kombinace) klubu. */
-  laceId: string;
+  /** Zkratka na náramku, např. LIT */
+  abbr: string;
+  /** Výchozí barva tkaničky (hex) */
+  laceColor: string;
   hashtag: string;
 }
 
-/** Barva tkaničky mimo sklad (jednorázová – neodečítá se). */
-export interface CustomLace {
+export type BraceletStatus = 'nabidka' | 'napad' | 'limitka' | 'archiv';
+
+export interface Bracelet {
+  id: string;
   name: string;
-  colors: string[];
+  clubId: string | null;
+  letters: string;
+  laceColor: string;
+  status: BraceletStatus;
+  /** Zmenšená fotka (data URL JPEG) */
+  photo?: string;
+  notes: string;
+  createdAt: string;
 }
 
-export interface Order {
+// ───────── Obsah na sítě ─────────
+
+export type Platform = 'ig-post' | 'ig-reel' | 'ig-story' | 'tiktok';
+export type ContentStage = 'idea' | 'prep' | 'edit' | 'scheduled' | 'published';
+export type ContentPillar = 'produkt' | 'vyroba' | 'fanousci' | 'zapas' | 'spoluprace' | 'soutez' | 'zakulisi';
+
+export interface ShotItem {
   id: string;
-  number: string;
+  text: string;
+  done: boolean;
+}
+
+export interface ContentItem {
+  id: string;
+  title: string;
+  stage: ContentStage;
+  pillar: ContentPillar;
+  platforms: Platform[];
+  /** Datum publikace YYYY-MM-DD */
+  date: string | null;
+  time: string;
+  braceletIds: string[];
+  contactIds: string[];
+  hook: string;
+  caption: string;
+  hashtags: string;
+  shots: ShotItem[];
+  notes: string;
+  link: string;
+  /** Jak to dopadlo – vlastní poznámka (dosah, komentáře, co fungovalo) */
+  result: string;
   createdAt: string;
   updatedAt: string;
-  customer: string;
-  channel: SalesChannel;
-  clubId: string | null;
-  /** Tkanička ze skladu; null = vlastní barva mimo sklad (customLace). */
-  laceId: string | null;
-  customLace?: CustomLace;
-  text: string;
-  endcapId: string;
-  note: string;
-  /** Ceníková cena v době vytvoření. */
-  listPrice: number;
-  /** Výsledná cena po slevě. */
-  price: number;
-  status: OrderStatus;
-  /** true = materiál už byl odečten ze skladu. */
-  materialDeducted: boolean;
-  doneAt?: string;
-  shippedAt?: string;
 }
 
-export interface PricingSettings {
+/** Příležitosti v kalendáři – Black Friday, derby, start play-off… */
+export interface KeyDate {
+  id: string;
+  date: string;
+  title: string;
+  note: string;
+}
+
+// ───────── CRM ─────────
+
+export type ContactKind = 'tvurce' | 'fanklub' | 'klub' | 'hrac' | 'obchod' | 'media' | 'ambasador' | 'jiny';
+export type CrmStage = 'tip' | 'osloveno' | 'odpoved' | 'jednani' | 'spoluprace' | 'hotovo' | 'nezajem';
+export type InteractionType = 'dm' | 'email' | 'telefon' | 'setkani' | 'naramek' | 'prispevek' | 'poznamka';
+
+export interface Interaction {
+  id: string;
+  date: string;
+  type: InteractionType;
+  text: string;
+}
+
+export interface Contact {
+  id: string;
+  name: string;
+  kind: ContactKind;
+  instagram: string;
+  tiktok: string;
+  email: string;
+  phone: string;
+  followers: number | null;
+  clubIds: string[];
+  stage: CrmStage;
+  /** Další krok, např. „Poslat náramek SPA“ */
+  nextAction: string;
+  /** Kdy se ozvat YYYY-MM-DD */
+  nextDate: string | null;
+  tags: string[];
+  notes: string;
+  interactions: Interaction[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ───────── Aplikace ─────────
+
+export interface Settings {
+  passwordHash: string | null;
+  autoLockMinutes: number;
+  lastBackupAt: string | null;
   basePrice: number;
   includedChars: number;
   extraCharPrice: number;
   maxChars: number;
 }
 
-export interface CostSettings {
-  /** Náklad na tkaničky pro 1 náramek (Kč). */
-  lacePerBracelet: number;
-  /** Náklad na 1 znak/korálek (Kč). */
-  charEach: number;
-  /** Náklad na 1 kovovou koncovku (Kč). */
-  endcapEach: number;
-  /** Obal, kartička, sáček… (Kč / ks). */
-  packaging: number;
-}
-
-export interface Settings {
-  pricing: PricingSettings;
-  costs: CostSettings;
-  endcapsPerBracelet: number;
-  /** Limit pro upozornění u znaků (ks). */
-  charMinQty: number;
-  /** Akcentová barva brandu (hex). */
-  accent: string;
-  /** SHA-256 hash hesla nastavený v aplikaci (přebíjí výchozí). */
-  passwordHash: string | null;
-  /** Automatické zamčení po nečinnosti (minuty, 0 = vypnuto). */
-  autoLockMinutes: number;
-  lastBackupAt: string | null;
-}
-
 export interface AppData {
-  schemaVersion: 1;
-  orders: Order[];
-  laces: LaceStock[];
-  chars: CharStock[];
-  endcaps: EndcapStock[];
+  schemaVersion: 2;
   clubs: Club[];
+  bracelets: Bracelet[];
+  content: ContentItem[];
+  keyDates: KeyDate[];
+  contacts: Contact[];
   settings: Settings;
-  orderSeq: number;
 }

@@ -9,8 +9,8 @@ function createWindow() {
     height: 920,
     minWidth: 1024,
     minHeight: 700,
-    backgroundColor: '#0D0F12',
-    title: 'Offsidestore · Výroba',
+    backgroundColor: '#050505',
+    title: 'Offsidestore Studio',
     autoHideMenuBar: true,
     webPreferences: {
       contextIsolation: true,

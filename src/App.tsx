@@ -1,25 +1,26 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useData } from './store/data';
 import { useLock } from './store/lock';
-import { applyAccent } from './lib/color';
+import { useUi } from './store/ui';
 import { LockScreen } from './features/lock/LockScreen';
-import { Header, type TabId } from './components/Header';
+import { Header } from './components/Header';
 import { Toasts } from './components/Toasts';
 import { ConfirmDialog } from './components/ConfirmDialog';
-import { ProductionPage } from './features/production/ProductionPage';
-import { InventoryPage } from './features/inventory/InventoryPage';
-import { CalculatorPage } from './features/calculator/CalculatorPage';
-import { SocialPage } from './features/social/SocialPage';
+import { DashboardPage } from './features/dashboard/DashboardPage';
+import { ContentPage } from './features/content/ContentPage';
+import { ContentEditor } from './features/content/ContentEditor';
+import { CrmPage } from './features/crm/CrmPage';
+import { ContactEditor } from './features/crm/ContactEditor';
+import { BraceletsPage } from './features/bracelets/BraceletsPage';
+import { BraceletEditor } from './features/bracelets/BraceletEditor';
+import { GeneratorPage } from './features/generator/GeneratorPage';
 import { SettingsPage } from './features/settings/SettingsPage';
 
 export default function App() {
   const unlocked = useLock((s) => s.unlocked);
   const lock = useLock((s) => s.lock);
-  const accent = useData((s) => s.settings.accent);
   const autoLock = useData((s) => s.settings.autoLockMinutes);
-  const [tab, setTab] = useState<TabId>('production');
-
-  useEffect(() => applyAccent(accent), [accent]);
+  const tab = useUi((s) => s.tab);
 
   // Automatické zamčení po nečinnosti
   useEffect(() => {
@@ -37,7 +38,7 @@ export default function App() {
     };
   }, [unlocked, autoLock, lock]);
 
-  // Rychlé zamčení klávesou Ctrl/Cmd + L
+  // Ctrl/Cmd + L = zamknout
   useEffect(() => {
     if (!unlocked) return;
     const onKey = (e: KeyboardEvent) => {
@@ -60,15 +61,19 @@ export default function App() {
   }
 
   return (
-    <div className="ice-bg min-h-full">
-      <Header tab={tab} onTab={setTab} />
-      <main className="mx-auto max-w-[1440px] px-4 pb-16 pt-6 sm:px-6">
-        {tab === 'production' && <ProductionPage />}
-        {tab === 'inventory' && <InventoryPage />}
-        {tab === 'calculator' && <CalculatorPage onGoToQueue={() => setTab('production')} />}
-        {tab === 'social' && <SocialPage />}
+    <div className="min-h-full bg-bg">
+      <Header />
+      <main className="mx-auto max-w-[1480px] px-4 pb-20 pt-7 sm:px-6">
+        {tab === 'dashboard' && <DashboardPage />}
+        {tab === 'content' && <ContentPage />}
+        {tab === 'crm' && <CrmPage />}
+        {tab === 'bracelets' && <BraceletsPage />}
+        {tab === 'generator' && <GeneratorPage />}
         {tab === 'settings' && <SettingsPage />}
       </main>
+      <ContentEditor />
+      <ContactEditor />
+      <BraceletEditor />
       <ConfirmDialog />
       <Toasts />
     </div>

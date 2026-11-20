@@ -1,7 +1,7 @@
 import type { AppData } from '../types';
 import { createSeedData } from '../data/seed';
 
-export const BACKUP_KIND = 'offsidestore-backup';
+export const BACKUP_KIND = 'offsidestore-crm-backup';
 
 export interface BackupFile {
   kind: typeof BACKUP_KIND;
@@ -11,7 +11,7 @@ export interface BackupFile {
 }
 
 export function createBackup(data: AppData, now = new Date()): BackupFile {
-  return { kind: BACKUP_KIND, exportedAt: now.toISOString(), app: 'Offsidestore Výroba 1.0', data };
+  return { kind: BACKUP_KIND, exportedAt: now.toISOString(), app: 'Offsidestore Studio 2.0', data };
 }
 
 export function backupFileName(now = new Date()): string {
@@ -31,10 +31,7 @@ export function downloadJson(obj: unknown, fileName: string) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-/**
- * Ověří a „doplní“ data ze zálohy. Přijímá jak celý soubor zálohy, tak holá data.
- * Chybějící sekce doplní z výchozích hodnot, aby import nikdy nerozbil aplikaci.
- */
+/** Ověří zálohu a doplní chybějící sekce výchozími hodnotami. */
 export function parseBackup(raw: string): AppData {
   let json: unknown;
   try {
@@ -44,24 +41,18 @@ export function parseBackup(raw: string): AppData {
   }
   const obj = json as Partial<BackupFile> & Partial<AppData>;
   const data = (obj.kind === BACKUP_KIND ? obj.data : obj) as Partial<AppData> | undefined;
-  if (!data || typeof data !== 'object') throw new Error('Soubor neobsahuje data Offsidestore.');
-  if (!Array.isArray(data.orders) || !Array.isArray(data.laces)) {
-    throw new Error('V záloze chybí objednávky nebo sklad – nejde o zálohu Offsidestore.');
+  if (!data || typeof data !== 'object' || (!Array.isArray(data.content) && !Array.isArray(data.contacts))) {
+    throw new Error('Tohle není záloha Offsidestore Studia (chybí obsah i kontakty).');
   }
   const base = createSeedData({ empty: true });
+  const arr = <T,>(v: T[] | undefined, fb: T[]) => (Array.isArray(v) ? v : fb);
   return {
-    schemaVersion: 1,
-    orders: data.orders,
-    laces: data.laces,
-    chars: Array.isArray(data.chars) ? data.chars : base.chars,
-    endcaps: Array.isArray(data.endcaps) ? data.endcaps : base.endcaps,
-    clubs: Array.isArray(data.clubs) ? data.clubs : base.clubs,
-    settings: {
-      ...base.settings,
-      ...(data.settings ?? {}),
-      pricing: { ...base.settings.pricing, ...(data.settings?.pricing ?? {}) },
-      costs: { ...base.settings.costs, ...(data.settings?.costs ?? {}) },
-    },
-    orderSeq: typeof data.orderSeq === 'number' ? data.orderSeq : data.orders.length + 1,
+    schemaVersion: 2,
+    clubs: arr(data.clubs, base.clubs),
+    bracelets: arr(data.bracelets, base.bracelets),
+    content: arr(data.content, []),
+    keyDates: arr(data.keyDates, base.keyDates),
+    contacts: arr(data.contacts, []),
+    settings: { ...base.settings, ...(data.settings ?? {}) },
   };
 }

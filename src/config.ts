@@ -1,43 +1,48 @@
 /**
- * Centrální konfigurace Offsidestore.
- * Tady se mění heslo, logo a výchozí ceník.
+ * Centrální konfigurace Offsidestore – barvy webu offsidestore.cz, heslo, logo.
  */
 
 export const BRAND = {
   name: 'OFFSIDESTORE',
   claim: 'Nos svůj klub. Kdekoliv.',
   web: 'offsidestore.cz',
+  /** Červená z tlačítek webu offsidestore.cz */
+  red: '#EC0016',
+  redDeep: '#B01E28',
+  burgundy: '#340A0E',
   /**
-   * Vlastní logo: nahrajte soubor do složky `public/brand/` (SVG nebo PNG)
-   * a nastavte cestu, např. 'brand/logo.svg'.
-   * null = použije se vestavěný vektorový placeholder (src/components/Logo.tsx).
+   * Vlastní logo jako soubor: nahrajte do public/brand/ a nastavte např. 'brand/logo.svg'.
+   * null = vestavěný vektorový znak (svislá offside čára + dva puky).
    */
   logoSrc: null as string | null,
 };
 
+/** Barvy tkaniček z konfigurátoru na offsidestore.cz */
+export const LACE_COLORS: Array<{ hex: string; name: string }> = [
+  { hex: '#B01E28', name: 'Červená' },
+  { hex: '#0B4EA2', name: 'Modrá' },
+  { hex: '#3FA9E0', name: 'Světle modrá' },
+  { hex: '#0F9D4F', name: 'Zelená' },
+  { hex: '#111111', name: 'Černá' },
+  { hex: '#F2C300', name: 'Žlutá' },
+  { hex: '#FF6B00', name: 'Oranžová' },
+  { hex: '#C0C0C0', name: 'Stříbrná' },
+  { hex: '#7A4A2B', name: 'Hnědá' },
+  { hex: '#FFFFFF', name: 'Bílá' },
+];
+
+export const laceName = (hex: string) =>
+  LACE_COLORS.find((c) => c.hex.toLowerCase() === hex.toLowerCase())?.name ?? hex.toUpperCase();
+
 /**
- * Výchozí heslo: "offside2026"
- * Ukládá se pouze jeho SHA-256 hash. Nový hash vygenerujete:
- *   npm run hash-password -- "NoveHeslo"
+ * Výchozí heslo: "offside2026" – ukládá se jen SHA-256 hash.
+ * Nový hash:  npm run hash-password -- "NoveHeslo"
  * Priorita: heslo změněné v Nastavení > VITE_APP_PASSWORD_HASH (.env) > tento hash.
  */
-export const DEFAULT_PASSWORD_HASH =
-  '0ebaa2b5cd8300c94b5df9899aac66c0d9e8147c6cf5ad93e53e9be2f92bc621';
+export const DEFAULT_PASSWORD_HASH = '0ebaa2b5cd8300c94b5df9899aac66c0d9e8147c6cf5ad93e53e9be2f92bc621';
 
 export const ENV_PASSWORD_HASH: string | undefined =
   (import.meta.env?.VITE_APP_PASSWORD_HASH as string | undefined) || undefined;
 
-/** Po kolika neúspěšných pokusech se zadávání na chvíli zablokuje. */
 export const LOCK_MAX_ATTEMPTS = 5;
 export const LOCK_COOLDOWN_SECONDS = 30;
-
-/** Akcentové barvy na výběr (Nastavení → Vzhled). */
-export const ACCENT_PRESETS = [
-  { name: 'Ledová modrá', hex: '#00B4D8' },
-  { name: 'Brankářská červená', hex: '#E63946' },
-  { name: 'Neon led', hex: '#4CC9F0' },
-  { name: 'Zlatý puk', hex: '#F4B942' },
-  { name: 'Mantinel zelená', hex: '#2EC4B6' },
-];
-
-export const DEFAULT_ACCENT = '#00B4D8';

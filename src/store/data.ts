@@ -1,48 +1,83 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
-import type { AppData, Club, CustomLace, EndcapStock, LaceStock, Order, OrderStatus, SalesChannel, Settings } from '../types';
+import type { AppData, Bracelet, Club, Contact, ContentItem, ContentStage, CrmStage, Interaction, KeyDate, Settings } from '../types';
 import { createSeedData } from '../data/seed';
-import { applyMaterial, DONE_STATUSES } from '../lib/inventory';
-import { normalizeText, priceForText } from '../lib/pricing';
-import { orderNumber, uid } from '../lib/id';
+import { uid } from '../lib/id';
+import { today } from '../lib/dates';
 
-export const STORAGE_KEY = 'offsidestore-data';
+export const STORAGE_KEY = 'offsidestore-crm';
 
-export interface OrderInput {
-  customer: string;
-  channel: SalesChannel;
-  clubId: string | null;
-  laceId: string | null;
-  customLace?: CustomLace;
-  text: string;
-  endcapId: string;
-  note: string;
-  /** Sleva v Kč na kus. */
-  discount: number;
-  status?: OrderStatus;
+const now = () => new Date().toISOString();
+
+export function newContent(patch: Partial<ContentItem> = {}): ContentItem {
+  return {
+    id: uid('c'),
+    title: '',
+    stage: 'idea',
+    pillar: 'produkt',
+    platforms: ['ig-post'],
+    date: null,
+    time: '18:00',
+    braceletIds: [],
+    contactIds: [],
+    hook: '',
+    caption: '',
+    hashtags: '',
+    shots: [],
+    notes: '',
+    link: '',
+    result: '',
+    createdAt: now(),
+    updatedAt: now(),
+    ...patch,
+  };
 }
 
-interface DataActions {
-  addOrder: (input: OrderInput) => Order;
-  addOrders: (inputs: OrderInput[]) => number;
-  updateOrder: (id: string, input: OrderInput) => void;
-  setStatus: (id: string, status: OrderStatus) => void;
-  deleteOrder: (id: string) => void;
+export function newContact(patch: Partial<Contact> = {}): Contact {
+  return {
+    id: uid('k'),
+    name: '',
+    kind: 'tvurce',
+    instagram: '',
+    tiktok: '',
+    email: '',
+    phone: '',
+    followers: null,
+    clubIds: [],
+    stage: 'tip',
+    nextAction: '',
+    nextDate: null,
+    tags: [],
+    notes: '',
+    interactions: [],
+    createdAt: now(),
+    updatedAt: now(),
+    ...patch,
+  };
+}
 
-  upsertLace: (lace: LaceStock) => void;
-  removeLace: (id: string) => void;
-  addLaceStock: (id: string, cm: number) => void;
+export function newBracelet(patch: Partial<Bracelet> = {}): Bracelet {
+  return { id: uid('b'), name: '', clubId: null, letters: '', laceColor: '#B01E28', status: 'napad', notes: '', createdAt: now(), ...patch };
+}
 
-  setCharQty: (char: string, qty: number) => void;
-  addChar: (char: string, qty: number) => void;
-  removeChar: (char: string) => void;
-  addToAllChars: (n: number) => void;
+interface Actions {
+  saveContent: (c: ContentItem) => void;
+  setContentStage: (id: string, stage: ContentStage) => void;
+  deleteContent: (id: string) => void;
 
-  upsertEndcap: (e: EndcapStock) => void;
-  removeEndcap: (id: string) => void;
+  saveContact: (c: Contact) => void;
+  setContactStage: (id: string, stage: CrmStage) => void;
+  logInteraction: (id: string, i: Omit<Interaction, 'id'>, next?: { nextAction: string; nextDate: string | null }) => void;
+  deleteContact: (id: string) => void;
 
-  upsertClub: (c: Club) => void;
-  removeClub: (id: string) => void;
+  saveBracelet: (b: Bracelet) => void;
+  deleteBracelet: (id: string) => void;
+
+  saveClub: (c: Club) => void;
+  deleteClub: (id: string) => void;
+
+  saveKeyDate: (k: KeyDate) => void;
+  deleteKeyDate: (id: string) => void;
 
   updateSettings: (patch: Partial<Settings>) => void;
   replaceAll: (data: AppData) => void;
@@ -50,31 +85,14 @@ interface DataActions {
   markBackup: () => void;
 }
 
-export type DataStore = AppData & DataActions;
+export type DataStore = AppData & Actions;
 
-const now = () => new Date().toISOString();
+const upsert = <T extends { id: string }>(list: T[], item: T): T[] =>
+  list.some((x) => x.id === item.id) ? list.map((x) => (x.id === item.id ? item : x)) : [...list, item];
 
-function pickData(s: DataStore): AppData {
-  const { schemaVersion, orders, laces, chars, endcaps, clubs, settings, orderSeq } = s;
-  return { schemaVersion, orders, laces, chars, endcaps, clubs, settings, orderSeq };
-}
-
-function buildOrderFields(input: OrderInput, s: AppData) {
-  const text = normalizeText(input.text).trim();
-  const listPrice = priceForText(text, s.settings.pricing);
-  const price = Math.max(0, listPrice - Math.max(0, input.discount || 0));
-  return {
-    customer: input.customer.trim(),
-    channel: input.channel,
-    clubId: input.clubId,
-    laceId: input.laceId,
-    customLace: input.laceId ? undefined : input.customLace,
-    text,
-    endcapId: input.endcapId,
-    note: input.note.trim(),
-    listPrice,
-    price,
-  };
+export function pickData(s: AppData): AppData {
+  const { schemaVersion, clubs, bracelets, content, keyDates, contacts, settings } = s;
+  return { schemaVersion, clubs, bracelets, content, keyDates, contacts, settings };
 }
 
 export const useData = create<DataStore>()(
@@ -82,115 +100,62 @@ export const useData = create<DataStore>()(
     (set, get) => ({
       ...createSeedData(),
 
-      addOrder: (input) => {
-        const s = get();
-        const status = input.status ?? 'new';
-        const order: Order = {
-          id: uid('ord'),
-          number: orderNumber(s.orderSeq),
-          createdAt: now(),
-          updatedAt: now(),
-          status: 'new',
-          materialDeducted: false,
-          ...buildOrderFields(input, s),
-        };
-        set({ orders: [...s.orders, order], orderSeq: s.orderSeq + 1 });
-        if (status !== 'new') get().setStatus(order.id, status);
-        return get().orders.find((o) => o.id === order.id)!;
-      },
-
-      addOrders: (inputs) => {
-        inputs.forEach((i) => get().addOrder(i));
-        return inputs.length;
-      },
-
-      updateOrder: (id, input) => {
-        const s = get();
-        const old = s.orders.find((o) => o.id === id);
-        if (!old) return;
-        const fields = buildOrderFields(input, s);
-        let stock: Partial<AppData> = {};
-        // Pokud už byl materiál odečten a mění se tkanička/text/koncovky, přepočítat sklad.
-        if (old.materialDeducted) {
-          const returned = applyMaterial(s, old, +1);
-          stock = applyMaterial({ ...s, ...returned }, fields, -1);
-        }
-        set({
-          ...stock,
-          orders: s.orders.map((o) => (o.id === id ? { ...o, ...fields, updatedAt: now() } : o)),
-        });
-        if (input.status && input.status !== old.status) get().setStatus(id, input.status);
-      },
-
-      setStatus: (id, status) => {
-        const s = get();
-        const order = s.orders.find((o) => o.id === id);
-        if (!order || order.status === status) return;
-        const shouldBeDeducted = DONE_STATUSES.has(status);
-        let stock: Partial<AppData> = {};
-        if (shouldBeDeducted && !order.materialDeducted) stock = applyMaterial(s, order, -1);
-        if (!shouldBeDeducted && order.materialDeducted) stock = applyMaterial(s, order, +1);
-        const t = now();
-        set({
-          ...stock,
-          orders: s.orders.map((o) =>
-            o.id === id
-              ? {
-                  ...o,
-                  status,
-                  materialDeducted: shouldBeDeducted,
-                  updatedAt: t,
-                  doneAt: shouldBeDeducted ? o.doneAt ?? t : undefined,
-                  shippedAt: status === 'shipped' ? t : undefined,
-                }
-              : o,
+      saveContent: (c) => set((s) => ({ content: upsert(s.content, { ...c, updatedAt: now() }) })),
+      setContentStage: (id, stage) =>
+        set((s) => ({
+          content: s.content.map((c) =>
+            c.id === id ? { ...c, stage, date: stage === 'published' && !c.date ? today() : c.date, updatedAt: now() } : c,
           ),
-        });
-      },
-
-      deleteOrder: (id) => set((s) => ({ orders: s.orders.filter((o) => o.id !== id) })),
-
-      upsertLace: (lace) =>
-        set((s) => ({
-          laces: s.laces.some((l) => l.id === lace.id) ? s.laces.map((l) => (l.id === lace.id ? lace : l)) : [...s.laces, lace],
         })),
-      removeLace: (id) => set((s) => ({ laces: s.laces.filter((l) => l.id !== id) })),
-      addLaceStock: (id, cm) =>
-        set((s) => ({ laces: s.laces.map((l) => (l.id === id ? { ...l, stockCm: Math.round(l.stockCm + cm) } : l)) })),
+      deleteContent: (id) => set((s) => ({ content: s.content.filter((c) => c.id !== id) })),
 
-      setCharQty: (char, qty) => set((s) => ({ chars: s.chars.map((c) => (c.char === char ? { ...c, qty } : c)) })),
-      addChar: (char, qty) =>
-        set((s) => {
-          const ch = normalizeText(char).trim();
-          if (!ch) return {};
-          if (s.chars.some((c) => c.char === ch)) return { chars: s.chars.map((c) => (c.char === ch ? { ...c, qty: c.qty + qty } : c)) };
-          return { chars: [...s.chars, { char: ch, qty }] };
-        }),
-      removeChar: (char) => set((s) => ({ chars: s.chars.filter((c) => c.char !== char) })),
-      addToAllChars: (n) => set((s) => ({ chars: s.chars.map((c) => ({ ...c, qty: c.qty + n })) })),
-
-      upsertEndcap: (e) =>
+      saveContact: (c) => set((s) => ({ contacts: upsert(s.contacts, { ...c, updatedAt: now() }) })),
+      setContactStage: (id, stage) => set((s) => ({ contacts: s.contacts.map((c) => (c.id === id ? { ...c, stage, updatedAt: now() } : c)) })),
+      logInteraction: (id, i, next) =>
         set((s) => ({
-          endcaps: s.endcaps.some((x) => x.id === e.id) ? s.endcaps.map((x) => (x.id === e.id ? e : x)) : [...s.endcaps, e],
+          contacts: s.contacts.map((c) =>
+            c.id === id
+              ? {
+                  ...c,
+                  interactions: [{ ...i, id: uid('i') }, ...c.interactions],
+                  ...(next ?? {}),
+                  stage: c.stage === 'tip' && i.type !== 'poznamka' ? 'osloveno' : c.stage,
+                  updatedAt: now(),
+                }
+              : c,
+          ),
         })),
-      removeEndcap: (id) => set((s) => ({ endcaps: s.endcaps.filter((e) => e.id !== id) })),
+      deleteContact: (id) =>
+        set((s) => ({
+          contacts: s.contacts.filter((c) => c.id !== id),
+          content: s.content.map((c) => ({ ...c, contactIds: c.contactIds.filter((x) => x !== id) })),
+        })),
 
-      upsertClub: (c) =>
-        set((s) => ({ clubs: s.clubs.some((x) => x.id === c.id) ? s.clubs.map((x) => (x.id === c.id ? c : x)) : [...s.clubs, c] })),
-      removeClub: (id) => set((s) => ({ clubs: s.clubs.filter((c) => c.id !== id) })),
+      saveBracelet: (b) => set((s) => ({ bracelets: upsert(s.bracelets, b) })),
+      deleteBracelet: (id) =>
+        set((s) => ({
+          bracelets: s.bracelets.filter((b) => b.id !== id),
+          content: s.content.map((c) => ({ ...c, braceletIds: c.braceletIds.filter((x) => x !== id) })),
+        })),
+
+      saveClub: (c) => set((s) => ({ clubs: upsert(s.clubs, c) })),
+      deleteClub: (id) => set((s) => ({ clubs: s.clubs.filter((c) => c.id !== id) })),
+
+      saveKeyDate: (k) => set((s) => ({ keyDates: upsert(s.keyDates, k).sort((a, b) => a.date.localeCompare(b.date)) })),
+      deleteKeyDate: (id) => set((s) => ({ keyDates: s.keyDates.filter((k) => k.id !== id) })),
 
       updateSettings: (patch) => set((s) => ({ settings: { ...s.settings, ...patch } })),
       replaceAll: (data) => set({ ...data }),
       resetDemo: () => {
-        const keepSecurity = get().settings;
+        const keep = get().settings;
         const seed = createSeedData();
-        set({ ...seed, settings: { ...seed.settings, passwordHash: keepSecurity.passwordHash, accent: keepSecurity.accent } });
+        set({ ...seed, settings: { ...seed.settings, passwordHash: keep.passwordHash, autoLockMinutes: keep.autoLockMinutes } });
       },
       markBackup: () => set((s) => ({ settings: { ...s.settings, lastBackupAt: now() } })),
     }),
     {
       name: STORAGE_KEY,
-      version: 1,
+      version: 2,
       storage: createJSONStorage(() => localStorage),
       partialize: (s) => pickData(s),
     },

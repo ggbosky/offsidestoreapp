@@ -1,14 +1,15 @@
-# Offsidestore · Výroba
+# Offsidestore Studio
 
-Lokální desktopová webová aplikace pro řízení výroby ručně pletených hokejových náramků **Offsidestore** („Nos svůj klub. Kdekoliv.“).
+Lokální aplikace pro značku **Offsidestore** („Nos svůj klub. Kdekoliv.“) – **obsah na sítě a CRM vztahů**, v barvách webu offsidestore.cz.
+Objednávky, tržby a zákazníky z e-shopu záměrně neřeší – to dělá Shopify.
 
-- 🔒 Zamykací obrazovka (heslo jako SHA‑256 hash, odemčení jen v paměti → po obnovení/zavření okna znovu zamčeno, automatické zamčení po nečinnosti, Ctrl+L)
-- 🏒 **Výrobní fronta** – stavy *Nová → V pletení → Hotovo k odeslání → Odesláno*, automatická cena, filtr a seskupení podle barvy tkaničky
-- 🖐️ **Režim u stolu** – fullscreen, obří znaky v pořadí s čísly, barvy tkaničky, poznámka, `Enter` = „Hotovo – další kus“
-- 📦 **Sklad** – tkaničky (cm → počet náramků), znaky, koncovky; automatický odpočet při „Hotovo“, vrácení při návratu stavu, červená upozornění pod limitem
-- 🧮 **Kalkulačka** – rychlá kalkulace s marží + týmové zakázky (řádek = náramek) s hromadným přidáním do fronty
-- 📣 **Sítě** – generátor textů, háčků, nápadů a hashtagů pro IG/Stories/TikTok + náhled vizuálu ke stažení jako PNG
-- 💾 Data v `localStorage`, **Export/Import zálohy** jedním klikem (JSON)
+- 🔒 **Zamykací obrazovka** – heslo jako SHA‑256 hash, odemčení jen v paměti (po obnovení/zavření okna znovu zamčeno), automatické zamčení po nečinnosti, Ctrl+L
+- 🏁 **Přehled** – co dnes publikovat, co je po termínu, komu se ozvat, blížící se příležitosti (Black Friday, Vánoce, derby…), týdenní kalendář, mix obsahu podle pilířů
+- 🗓️ **Obsah** – plán příspěvků pro IG (příspěvek, Reels, Story) a TikTok: tabule *Nápad → Natočit → Střih a text → Naplánováno → Publikováno* (přetahování), měsíční kalendář, editor s háčkem, popiskem, hashtagy, seznamem záběrů, propojením na náramky a spolupráce, „Navrhnout text“
+- 🤝 **Kontakty (CRM)** – tvůrci, fankluby, hráči, fanshopy, média; fáze spolupráce (Tip → Osloveno → … → Spolupráce běží), další krok s připomínkou, historie komunikace (DM, e‑mail, poslaný náramek…)
+- 💎 **Náramky** – knihovna designů a nápadů (klub, zkratka, barva tkaničky z konfigurátoru webu, fotka, stav: v nabídce / nápad / limitka)
+- ✨ **Generátor** – texty v hlasu značky, háčky, nápady na natáčení, hashtagy + vizuál 4:5 / 9:16 ke stažení jako PNG; vše jde jedním klikem uložit do plánu
+- 💾 Data v `localStorage`, **záloha a obnova** jedním klikem (JSON)
 
 ## Spuštění na PC
 
@@ -51,32 +52,28 @@ Instalátor (.exe/.dmg) pak vyrobíte např. přes `electron-builder` (`npx elec
 src/
   config.ts              ← heslo (hash), logo, akcentové barvy
   types.ts               ← datový model (Order, LaceStock, CharStock, EndcapStock, Club, Settings)
-  data/seed.ts           ← výchozí kluby, sklad, ceník + 3 ukázkové objednávky
+  data/seed.ts           ← 12 klubů z webu (zkratky, barvy tkaniček) + ukázkový obsah a kontakty
   lib/
-    pricing.ts           ← 290 Kč do 3 znaků + 12 Kč/znak, max 12 (mezery se nepočítají)
-    inventory.ts         ← spotřeba materiálu, odpočet/vrácení, limity, poptávka fronty
-    quote.ts             ← kalkulace a marže
-    backup.ts            ← export/import zálohy s validací
-    auth.ts              ← SHA-256 (WebCrypto + JS záloha), ověření hesla
-  store/                 ← Zustand: data (persist do localStorage), lock (jen paměť), toasty
-  components/            ← Header, Logo, BraceletGraphic (SVG náramek), UI prvky
+    selectors.ts         ← co je po termínu, co je na řadě, komu se ozvat
+    dates.ts meta.ts     ← data, popisky fází, pilířů a typů kontaktů
+    backup.ts auth.ts    ← záloha/obnova, SHA-256 heslo
+  store/                 ← Zustand: data (persist), ui (otevřené editory), lock (jen paměť), toasty, potvrzení
+  components/            ← Header, Logo (znak z webu), BraceletGraphic (plochá tkanička + stříbrná písmena)
   features/
-    lock/                ← Lock Screen
-    production/          ← fronta, formulář, karta objednávky, Režim u stolu
-    inventory/ calculator/ social/ settings/
+    lock/ dashboard/ content/ crm/ bracelets/ generator/ settings/
 electron/main.cjs        ← Electron obal
 ```
 
-Stack: **React 18 + TypeScript + Vite + Tailwind CSS + Zustand**, ikony lucide-react, písma Inter + Oswald přibalená lokálně (funguje offline).
+Stack: **React 18 + TypeScript + Vite + Tailwind CSS + Zustand**, ikony lucide-react, písmo Assistant (jako na webu) přibalené lokálně – funguje offline.
 
 ## Přizpůsobení
 
 - **Logo:** vložte soubor do `public/brand/` a v `src/config.ts` nastavte `BRAND.logoSrc = 'brand/logo.svg'`. Favicon: `public/brand/favicon.svg`.
-- **Akcentová barva:** Nastavení → Vzhled (výchozí ledová modrá `#00B4D8`, předvolba i červená `#E63946`), nebo `DEFAULT_ACCENT` v `src/config.ts`.
+- **Barvy:** převzaté z offsidestore.cz (`tailwind.config.js` – černá `#050505`, červená `#EC0016`, přechod `#B01E28 → #340A0E`).
 - **Heslo:** priorita *Nastavení v aplikaci* → `VITE_APP_PASSWORD_HASH` v `.env` (viz `.env.example`) → `DEFAULT_PASSWORD_HASH` v `src/config.ts`.
-- **Barvy klubů** jsou orientační – upravte je ve Skladu (tkaničky) a v Nastavení (kluby).
-- **Ceník, náklady na materiál, spotřebu tkaničky a limity** nastavíte v aplikaci.
+- **Kluby a barvy tkaniček** odpovídají fotkám produktů na webu; upravíte je v Nastavení → Kluby.
+- **Příležitosti** (derby, play-off, svátky) přidáte v Nastavení.
 
 ## Bezpečnost – upřímně
 
-Zámek chrání před náhodným pohledem „přes rameno“ u stolu. Nejde o šifrování: data v `localStorage` si technicky zdatný člověk s přístupem k počítači přečte. Pro citlivá data (adresy zákazníků) používejte zamčený uživatelský účet OS / šifrovaný disk a zálohy ukládejte na bezpečné místo.
+Zámek chrání před náhodným pohledem „přes rameno“ u stolu. Nejde o šifrování: data v `localStorage` (kontakty!) si technicky zdatný člověk s přístupem k počítači přečte. Pro citlivá data (e‑maily a telefony kontaktů) používejte zamčený uživatelský účet OS / šifrovaný disk a zálohy ukládejte na bezpečné místo.

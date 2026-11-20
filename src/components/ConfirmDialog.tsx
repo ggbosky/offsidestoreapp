@@ -24,7 +24,7 @@ export function ConfirmDialog() {
     <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm" onMouseDown={() => close(false)}>
       <div className="card w-full max-w-md animate-pop p-6" role="alertdialog" aria-modal="true" onMouseDown={(e) => e.stopPropagation()}>
         <div className="flex gap-3">
-          <HelpCircle className="mt-0.5 shrink-0 text-accent" size={22} />
+          <HelpCircle className="mt-0.5 shrink-0 text-brand" size={22} />
           <p className="whitespace-pre-line text-sm leading-relaxed text-ink">{message}</p>
         </div>
         <div className="mt-6 flex justify-end gap-2">

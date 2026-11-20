@@ -1,174 +1,112 @@
 import { useId } from 'react';
-import type { EndcapFinish } from '../types';
 import { splitChars } from '../lib/pricing';
-
-const FINISH: Record<EndcapFinish, string[]> = {
-  silver: ['#F4F6F8', '#B9C0C9', '#7D8590', '#D7DCE2', '#9AA2AC'],
-  black: ['#5A5F67', '#2A2E34', '#121417', '#383D44', '#1A1D21'],
-  gold: ['#FFF1C1', '#E3B95A', '#A9761E', '#F0CF7A', '#B8862F'],
-  rose: ['#FBE0D6', '#E0A68F', '#A8664F', '#EBC0AE', '#B97A63'],
-};
-
-export const FINISH_LABEL: Record<EndcapFinish, string> = {
-  silver: 'Stříbrná',
-  black: 'Černá',
-  gold: 'Zlatá',
-  rose: 'Růžové zlato',
-};
-
-export const FINISH_SWATCH: Record<EndcapFinish, string> = {
-  silver: 'linear-gradient(180deg,#F4F6F8,#7D8590 55%,#D7DCE2)',
-  black: 'linear-gradient(180deg,#5A5F67,#121417 55%,#383D44)',
-  gold: 'linear-gradient(180deg,#FFF1C1,#A9761E 55%,#F0CF7A)',
-  rose: 'linear-gradient(180deg,#FBE0D6,#A8664F 55%,#EBC0AE)',
-};
+import { luminance } from '../lib/color';
 
 export interface BraceletGraphicProps {
-  colors: string[];
+  /** Barva tkaničky (jedna – náramek je z jedné tkaničky) */
+  color: string;
   text: string;
-  finish?: EndcapFinish;
-  /** Délka pleteniny na každé straně (jednotky SVG). */
   sideLength?: number;
   className?: string;
-  // pro vnoření do jiného SVG (náhled příspěvku)
   x?: number;
   y?: number;
   width?: number | string;
   height?: number | string;
 }
 
-const BEAD = 34;
-const BEAD_GAP = 4;
-const SPACE_W = 16;
-const CAP_W = 30;
-const H = 60;
-const TOP = 16;
-const BOT = 44;
-const MID = 30;
+const H = 80;
+const BAND_T = 27;
+const BAND_B = 53;
+const STEP = 38;
+const TIP = 26;
 
-/** Vektorový náhled náramku: splétaná tkanička v klubových barvách, korálky se znaky, kovové koncovky. */
-export function BraceletGraphic({ colors, text, finish = 'silver', sideLength = 70, className, x, y, width, height }: BraceletGraphicProps) {
+/** Plochá hokejová tkanička se vzorem a stříbrnými kovovými písmeny – jako na fotkách z offsidestore.cz. */
+export function BraceletGraphic({ color, text, sideLength = 70, className, x, y, width, height }: BraceletGraphicProps) {
   const rid = useId().replace(/[^a-zA-Z0-9]/g, '');
-  const cols = colors.length ? colors : ['#9BA3AF'];
   const chars = splitChars(text);
-  const beadsW = chars.reduce((w, c) => w + (c.trim() === '' ? SPACE_W : BEAD + BEAD_GAP), 0) - (chars.length ? BEAD_GAP : 0);
-  const pad = chars.length ? 10 : 0;
-  const W = CAP_W * 2 + sideLength * 2 + beadsW + pad * 2;
-  const bandStart = CAP_W - 4;
-  const bandEnd = W - CAP_W + 4;
-  const step = 11;
-  const segCount = Math.ceil((bandEnd - bandStart) / step) + 2;
-  const metal = FINISH[finish];
-
-  let cursor = CAP_W + sideLength + pad;
-  const beads = chars.map((c, i) => {
-    if (c.trim() === '') {
-      cursor += SPACE_W;
-      return null;
-    }
-    const bx = cursor;
-    cursor += BEAD + BEAD_GAP;
-    return (
-      <g key={i}>
-        <rect x={bx} y={(H - BEAD) / 2 + 1.5} width={BEAD} height={BEAD} rx={6} fill="rgba(0,0,0,0.35)" />
-        <rect x={bx} y={(H - BEAD) / 2} width={BEAD} height={BEAD} rx={6} fill={`url(#bead${rid})`} stroke="#8A929C" strokeWidth={0.8} />
-        <text
-          x={bx + BEAD / 2}
-          y={H / 2 + 1}
-          textAnchor="middle"
-          dominantBaseline="central"
-          fontFamily="'Oswald Variable', Oswald, Impact, 'Arial Narrow', sans-serif"
-          fontWeight={700}
-          fontSize={21}
-          fill="#121417"
-        >
-          {c}
-        </text>
-      </g>
-    );
-  });
-
-  const shade = (i: number) => (cols.length === 1 && i % 2 ? 0.22 : 0);
+  const lettersW = chars.length * STEP;
+  const W = TIP * 2 + sideLength * 2 + lettersW;
+  const light = luminance(color) > 0.35;
+  const fleck = light ? 'rgba(10,10,10,0.75)' : 'rgba(255,255,255,0.55)';
+  let cx = TIP + sideLength + STEP / 2;
 
   return (
-    <svg
-      viewBox={`0 0 ${W} ${H}`}
-      className={className}
-      x={x}
-      y={y}
-      width={width}
-      height={height}
-      role="img"
-      aria-label={`Náramek ${text}`}
-      preserveAspectRatio="xMidYMid meet"
-    >
+    <svg viewBox={`0 0 ${W} ${H}`} className={className} x={x} y={y} width={width} height={height} role="img" aria-label={`Náramek ${text}`} preserveAspectRatio="xMidYMid meet">
       <defs>
-        <clipPath id={`band${rid}`}>
-          <rect x={bandStart} y={TOP} width={bandEnd - bandStart} height={BOT - TOP} rx={8} />
-        </clipPath>
-        <linearGradient id={`sheen${rid}`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#fff" stopOpacity="0.28" />
-          <stop offset="0.35" stopColor="#fff" stopOpacity="0.05" />
-          <stop offset="0.65" stopColor="#000" stopOpacity="0.05" />
-          <stop offset="1" stopColor="#000" stopOpacity="0.35" />
+        <pattern id={`fl${rid}`} width="22" height="26" patternUnits="userSpaceOnUse" y={BAND_T}>
+          <rect x="1" y="8" width="5" height="3" rx="1" fill={fleck} />
+          <rect x="12" y="15" width="5" height="3" rx="1" fill={fleck} />
+          <rect x="7" y="15" width="3" height="3" rx="1" fill={fleck} opacity="0.6" />
+          <rect x="17" y="8" width="3" height="3" rx="1" fill={fleck} opacity="0.6" />
+        </pattern>
+        <pattern id={`wv${rid}`} width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(55)">
+          <line x1="0" y1="0" x2="0" y2="5" stroke={light ? '#000' : '#fff'} strokeOpacity="0.12" strokeWidth="1.4" />
+        </pattern>
+        <linearGradient id={`sh${rid}`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#fff" stopOpacity="0.22" />
+          <stop offset="0.45" stopColor="#fff" stopOpacity="0" />
+          <stop offset="1" stopColor="#000" stopOpacity="0.4" />
         </linearGradient>
-        <linearGradient id={`metal${rid}`} x1="0" y1="0" x2="0" y2="1">
-          {metal.map((c, i) => (
-            <stop key={i} offset={[0, 0.38, 0.52, 0.78, 1][i]} stopColor={c} />
-          ))}
+        <linearGradient id={`ag${rid}`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#F4F5F7" />
+          <stop offset="0.5" stopColor="#8B9098" />
+          <stop offset="1" stopColor="#D5D8DD" />
         </linearGradient>
-        <linearGradient id={`bead${rid}`} x1="0" y1="0" x2="0" y2="1">
+        <linearGradient id={`sv${rid}`} x1="0" y1="0" x2="0.4" y2="1">
           <stop offset="0" stopColor="#FFFFFF" />
-          <stop offset="1" stopColor="#DADDE2" />
+          <stop offset="0.35" stopColor="#C9CDD3" />
+          <stop offset="0.55" stopColor="#8A9099" />
+          <stop offset="0.8" stopColor="#E3E6EA" />
+          <stop offset="1" stopColor="#A2A8B0" />
         </linearGradient>
+        <filter id={`ds${rid}`} x="-20%" y="-20%" width="140%" height="160%">
+          <feDropShadow dx="0" dy="2" stdDeviation="1.6" floodColor="#000" floodOpacity="0.55" />
+        </filter>
       </defs>
 
-      {/* Splétaná tkanička (rybí kost) */}
-      <g clipPath={`url(#band${rid})`}>
-        {Array.from({ length: segCount }, (_, i) => {
-          const sx = bandStart - step + i * step;
-          const up = cols[i % cols.length];
-          const lo = cols[(i + (cols.length > 1 ? 1 : 0)) % cols.length];
-          return (
-            <g key={i}>
-              <polygon points={`${sx},${TOP} ${sx + step},${TOP} ${sx + step + 7},${MID} ${sx + 7},${MID}`} fill={up} />
-              <polygon points={`${sx},${TOP} ${sx + step},${TOP} ${sx + step + 7},${MID} ${sx + 7},${MID}`} fill="#000" opacity={shade(i)} />
-              <polygon points={`${sx + 7},${MID} ${sx + step + 7},${MID} ${sx + step},${BOT} ${sx},${BOT}`} fill={lo} />
-              <polygon points={`${sx + 7},${MID} ${sx + step + 7},${MID} ${sx + step},${BOT} ${sx},${BOT}`} fill="#000" opacity={shade(i + 1)} />
-              <line x1={sx} y1={TOP} x2={sx + 7} y2={MID} stroke="#000" strokeOpacity="0.28" strokeWidth="1" />
-              <line x1={sx + 7} y1={MID} x2={sx} y2={BOT} stroke="#000" strokeOpacity="0.28" strokeWidth="1" />
-            </g>
-          );
-        })}
-        <rect x={bandStart} y={TOP} width={bandEnd - bandStart} height={BOT - TOP} fill={`url(#sheen${rid})`} />
-        <line x1={bandStart} y1={MID} x2={bandEnd} y2={MID} stroke="#000" strokeOpacity="0.2" strokeWidth="0.8" />
-      </g>
-
-      {beads}
+      {/* Tkanička */}
+      <rect x={TIP - 2} y={BAND_T} width={W - 2 * TIP + 4} height={BAND_B - BAND_T} fill={color} />
+      <rect x={TIP - 2} y={BAND_T} width={W - 2 * TIP + 4} height={BAND_B - BAND_T} fill={`url(#wv${rid})`} />
+      <rect x={TIP - 2} y={BAND_T} width={W - 2 * TIP + 4} height={BAND_B - BAND_T} fill={`url(#fl${rid})`} />
+      <rect x={TIP - 2} y={BAND_T} width={W - 2 * TIP + 4} height={BAND_B - BAND_T} fill={`url(#sh${rid})`} />
+      <line x1={TIP} y1={BAND_T + 0.6} x2={W - TIP} y2={BAND_T + 0.6} stroke="#000" strokeOpacity="0.25" />
+      <line x1={TIP} y1={BAND_B - 0.6} x2={W - TIP} y2={BAND_B - 0.6} stroke="#000" strokeOpacity="0.35" />
 
       {/* Kovové koncovky */}
-      {[0, W - CAP_W].map((cx, i) => (
-        <g key={i}>
-          <rect x={cx} y={11} width={CAP_W} height={38} rx={6} fill={`url(#metal${rid})`} stroke="rgba(0,0,0,0.45)" strokeWidth="0.8" />
-          {[8, 15, 22].map((gx) => (
-            <line key={gx} x1={cx + (i ? CAP_W - gx : gx)} y1={14} x2={cx + (i ? CAP_W - gx : gx)} y2={46} stroke="#000" strokeOpacity="0.18" strokeWidth="1" />
-          ))}
-        </g>
+      {[0, W - TIP].map((ax, i) => (
+        <rect key={i} x={ax} y={BAND_T + 5} width={TIP} height={BAND_B - BAND_T - 10} rx={4} fill={`url(#ag${rid})`} stroke="rgba(0,0,0,0.5)" strokeWidth="0.8" />
       ))}
+
+      {/* Stříbrná písmena */}
+      {chars.map((c, i) => {
+        const px = cx;
+        cx += STEP;
+        if (c.trim() === '') return null;
+        return (
+          <g key={i} filter={`url(#ds${rid})`}>
+            <text
+              x={px}
+              y={H / 2 + 1}
+              textAnchor="middle"
+              dominantBaseline="central"
+              fontFamily="'Assistant Variable', Assistant, 'Arial Black', Arial, sans-serif"
+              fontWeight={700}
+              fontSize={40}
+              fill={`url(#sv${rid})`}
+              stroke="#3E434A"
+              strokeWidth={0.8}
+              paintOrder="stroke"
+            >
+              {c}
+            </text>
+          </g>
+        );
+      })}
     </svg>
   );
 }
 
-/** Malý barevný vzorek tkaničky (šikmé proužky). */
-export function LaceSwatch({ colors, className = 'h-4 w-8' }: { colors: string[]; className?: string }) {
-  const cols = colors.length ? colors : ['#9BA3AF'];
-  const band = 5;
-  const stops = cols.map((c, i) => `${c} ${i * band}px ${(i + 1) * band}px`).join(', ');
-  return (
-    <span
-      className={`inline-block shrink-0 rounded-md ring-1 ring-white/15 ${className}`}
-      style={{ backgroundImage: `repeating-linear-gradient(115deg, ${stops})` }}
-      aria-hidden
-    />
-  );
+/** Kulatý vzorek barvy tkaničky. */
+export function LaceDot({ color, className = 'h-4 w-4' }: { color: string; className?: string }) {
+  return <span className={`inline-block shrink-0 rounded-full ring-1 ring-white/25 ${className}`} style={{ background: color }} aria-hidden />;
 }
