@@ -1,3 +1,4 @@
+import { askConfirm } from '../../store/confirm';
 import { ChevronRight, Hand, Pencil, StickyNote, Trash2 } from 'lucide-react';
 import type { Order, OrderStatus } from '../../types';
 import { useData } from '../../store/data';
@@ -92,8 +93,8 @@ export function OrderCard({ order, onEdit, onBraid }: { order: Order; onEdit: ()
             <button
               className="btn-icon hover:text-danger"
               title="Smazat"
-              onClick={() => {
-                if (confirm(`Opravdu smazat objednávku ${order.number} (${order.text})?`)) deleteOrder(order.id);
+              onClick={async () => {
+                if (await askConfirm(`Opravdu smazat objednávku ${order.number} (${order.text})?`)) deleteOrder(order.id);
               }}
             >
               <Trash2 size={15} />

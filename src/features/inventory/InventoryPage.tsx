@@ -1,3 +1,4 @@
+import { askConfirm } from '../../store/confirm';
 import { useMemo, useState } from 'react';
 import { AlertTriangle, Minus, Pencil, Plus, Trash2 } from 'lucide-react';
 import type { EndcapFinish, EndcapStock, LaceStock } from '../../types';
@@ -101,9 +102,9 @@ function LacesSection({ demand }: { demand: Record<string, number> }) {
                 <button
                   className="btn-icon hover:text-danger"
                   title="Smazat"
-                  onClick={() => {
+                  onClick={async () => {
                     if (usedByClub) return toast(`Tkaničku používá klub ${usedByClub.name} – nejdřív ho změňte v Nastavení.`, 'warn');
-                    if (confirm(`Smazat tkaničku „${l.name}“?`)) removeLace(l.id);
+                    if (await askConfirm(`Smazat tkaničku „${l.name}“?`)) removeLace(l.id);
                   }}
                 >
                   <Trash2 size={15} />
@@ -235,7 +236,7 @@ function CharsSection({ demand }: { demand: Record<string, number> }) {
       <div className="flex flex-wrap items-center gap-3">
         <h2 className="section-title">Znaky / písmena</h2>
         <span className="text-sm text-ink-muted">limit {min} ks</span>
-        <button className="btn-ghost ml-auto py-1.5 text-xs" onClick={() => confirm('Přidat +10 ks ke všem znakům?') && addToAllChars(10)}>
+        <button className="btn-ghost ml-auto py-1.5 text-xs" onClick={async () => (await askConfirm('Přidat +10 ks ke všem znakům?')) && addToAllChars(10)}>
           +10 ke všem
         </button>
       </div>
@@ -248,7 +249,7 @@ function CharsSection({ demand }: { demand: Record<string, number> }) {
               <div key={c.char} className={`group relative rounded-xl border p-2 text-center ${low ? 'border-danger/50 bg-danger/10' : 'border-white/[0.07] bg-ice-950/50'}`}>
                 <button
                   className="absolute right-1 top-1 hidden rounded p-0.5 text-ink-faint hover:text-danger group-hover:block"
-                  onClick={() => confirm(`Odebrat znak „${c.char}“ ze skladu?`) && removeChar(c.char)}
+                  onClick={async () => (await askConfirm(`Odebrat znak „${c.char}“ ze skladu?`)) && removeChar(c.char)}
                   title="Odebrat"
                 >
                   <Trash2 size={11} />
@@ -337,7 +338,7 @@ function EndcapsSection({ demand }: { demand: Record<string, number> }) {
               <button className="btn-icon" onClick={() => setEdit(e)} title="Upravit / naskladnit">
                 <Pencil size={15} />
               </button>
-              <button className="btn-icon hover:text-danger" onClick={() => confirm(`Smazat „${e.name}“?`) && removeEndcap(e.id)} title="Smazat">
+              <button className="btn-icon hover:text-danger" onClick={async () => (await askConfirm(`Smazat „${e.name}“?`)) && removeEndcap(e.id)} title="Smazat">
                 <Trash2 size={15} />
               </button>
             </div>

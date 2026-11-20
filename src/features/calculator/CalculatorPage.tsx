@@ -1,3 +1,4 @@
+import { askConfirm } from '../../store/confirm';
 import { useMemo, useState } from 'react';
 import { ListPlus, Users, Zap } from 'lucide-react';
 import { useData } from '../../store/data';
@@ -143,10 +144,10 @@ function TeamOrder({ onGoToQueue }: { onGoToQueue: () => void }) {
   const club = clubs.find((c) => c.laceId === laceId);
   const invalid = lines.filter((l) => !l.valid).length;
 
-  function addToQueue() {
+  async function addToQueue() {
     const valid = lines.filter((l) => l.valid);
     if (!valid.length) return;
-    if (!confirm(`Přidat ${valid.length} ks do výrobní fronty?`)) return;
+    if (!(await askConfirm(`Přidat ${valid.length} ks do výrobní fronty?`))) return;
     addOrders(
       valid.map((l) => ({
         customer: team,

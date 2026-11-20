@@ -5,6 +5,7 @@ import { applyAccent } from './lib/color';
 import { LockScreen } from './features/lock/LockScreen';
 import { Header, type TabId } from './components/Header';
 import { Toasts } from './components/Toasts';
+import { ConfirmDialog } from './components/ConfirmDialog';
 import { ProductionPage } from './features/production/ProductionPage';
 import { InventoryPage } from './features/inventory/InventoryPage';
 import { CalculatorPage } from './features/calculator/CalculatorPage';
@@ -68,6 +69,7 @@ export default function App() {
         {tab === 'social' && <SocialPage />}
         {tab === 'settings' && <SettingsPage />}
       </main>
+      <ConfirmDialog />
       <Toasts />
     </div>
   );

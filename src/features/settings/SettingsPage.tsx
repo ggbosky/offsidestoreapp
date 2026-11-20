@@ -1,3 +1,4 @@
+import { askConfirm } from '../../store/confirm';
 import { useRef, useState, type ReactNode } from 'react';
 import { Database, Download, KeyRound, Palette, Plus, RotateCcw, Shield, Tag, Trash2, Upload, Users, Wallet } from 'lucide-react';
 import type { Club } from '../../types';
@@ -48,7 +49,7 @@ function DataSection() {
   async function onImport(file: File) {
     try {
       const data = parseBackup(await file.text());
-      if (!confirm(`Obnovit zálohu „${file.name}“?\n\nObjednávek v záloze: ${data.orders.length}\nSoučasná data (${orders.length} objednávek) budou přepsána.`)) return;
+      if (!(await askConfirm(`Obnovit zálohu „${file.name}“?\n\nObjednávek v záloze: ${data.orders.length}\nSoučasná data (${orders.length} objednávek) budou přepsána.`))) return;
       // heslo ponecháme současné, pokud v záloze není
       replaceAll({ ...data, settings: { ...data.settings, passwordHash: data.settings.passwordHash ?? settings.passwordHash } });
       toast('Záloha byla obnovena.');
@@ -86,8 +87,8 @@ function DataSection() {
         />
         <button
           className="btn-ghost ml-auto"
-          onClick={() => {
-            if (confirm('Nahradit všechna data ukázkovými (3 objednávky, výchozí sklad)? Doporučuji nejdřív stáhnout zálohu.')) {
+          onClick={async () => {
+            if (await askConfirm('Nahradit všechna data ukázkovými (3 objednávky, výchozí sklad)? Doporučuji nejdřív stáhnout zálohu.')) {
               resetDemo();
               toast('Načtena ukázková data.');
             }
@@ -97,8 +98,8 @@ function DataSection() {
         </button>
         <button
           className="btn-danger"
-          onClick={() => {
-            if (!confirm('Smazat všechny objednávky a začít naostro? Sklad a nastavení zůstanou.')) return;
+          onClick={async () => {
+            if (!(await askConfirm('Smazat všechny objednávky a začít naostro? Sklad a nastavení zůstanou.'))) return;
             const d = getAppData();
             replaceAll({ ...d, orders: [], orderSeq: 1 });
             toast('Objednávky smazány – můžete začít naostro.');
@@ -287,9 +288,9 @@ function ClubsSection() {
               <button
                 className="btn-icon hover:text-danger"
                 title="Odebrat klub"
-                onClick={() => {
+                onClick={async () => {
                   const used = orders.filter((o) => o.clubId === c.id).length;
-                  if (confirm(used ? `Klub má ${used} objednávek (zůstanou zachovány bez názvu klubu). Odebrat?` : `Odebrat klub ${c.name}?`)) removeClub(c.id);
+                  if (await askConfirm(used ? `Klub má ${used} objednávek (zůstanou zachovány bez názvu klubu). Odebrat?` : `Odebrat klub ${c.name}?`)) removeClub(c.id);
                 }}
               >
                 <Trash2 size={15} />
