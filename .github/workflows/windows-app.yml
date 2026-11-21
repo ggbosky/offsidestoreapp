@@ -1,0 +1,53 @@
+name: Windows aplikace
+
+# Sestaví Offsidestore Studio na Windows a zveřejní ho ke stažení v sekci Releases.
+on:
+  push:
+    branches: [main, claude/confident-carson-59kwxk]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalace
+        run: npm ci
+
+      - name: Testy
+        run: npm test
+
+      - name: Sestavení aplikace
+        run: |
+          npm run build
+          npm run build:electron
+
+      - name: Instalačka a přenosná verze
+        run: npx electron-builder --win nsis portable --x64 --publish never
+
+      - name: Zveřejnit ke stažení
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: studio-${{ github.run_number }}
+          target_commitish: ${{ github.sha }}
+          name: Offsidestore Studio pro Windows (sestavení ${{ github.run_number }})
+          make_latest: true
+          body: |
+            **Ke stažení:**
+            - `Offsidestore-Studio-Setup-*.exe` – instalačka (doporučeno): nainstaluje aplikaci a vytvoří ikonu na ploše.
+            - `Offsidestore-Studio-*.exe` – přenosná verze bez instalace.
+
+            Při prvním spuštění Windows může ukázat „Systém Windows ochránil počítač“ → Další informace → Přesto spustit.
+            Heslo: offside2026
+          files: |
+            release/Offsidestore-Studio-Setup-*.exe
+            release/Offsidestore-Studio-*.exe
