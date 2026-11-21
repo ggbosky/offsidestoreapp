@@ -2,6 +2,8 @@ import { useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { CalendarHeart, CheckCircle2, Circle, Database, Download, KeyRound, Loader2, Plug, Plus, RotateCcw, Shield, Tag, Trash2, Upload, Users } from 'lucide-react';
 import { useIntegrations } from '../../store/integrations';
 import { refreshShopify } from '../shopify/ShopifyPanel';
+import { api } from '../../lib/api';
+import { useEffect } from 'react';
 import { useData, getAppData } from '../../store/data';
 import { Field, NumberInput } from '../../components/ui';
 import { LaceDot } from '../../components/BraceletGraphic';
@@ -349,14 +351,15 @@ function IntegrationsSection() {
           ))}
         </ul>
       )}
+      <KeysForm onSaved={verify} />
       <button className="btn-ghost" onClick={verify} disabled={busy}>
         {busy ? <Loader2 size={15} className="animate-spin" /> : <RotateCcw size={15} />} Ověřit propojení
       </button>
       <details className="rounded-xl border border-line bg-bg/50 p-4 text-sm text-muted">
-        <summary className="cursor-pointer font-bold text-white">Jak propojit (5 minut)</summary>
+        <summary className="cursor-pointer font-bold text-white">Kde klíče vzít (5 minut)</summary>
         <ol className="mt-3 list-decimal space-y-2 pl-5">
           <li>
-            Ve složce aplikace zkopíruj <code>.env.example</code> jako <code>.env</code>. Klíče patří jen sem – zůstanou v tvém PC a do prohlížeče se nedostanou.
+            V desktopové aplikaci klíče vlož do formuláře výše – uloží se šifrovaně jen v tomto počítači. (Ve vývojové verzi přes <code>npm run dev</code> se zadávají do souboru <code>.env</code>.)
           </li>
           <li>
             <b className="text-white">Claude:</b> na platform.claude.com → API Keys vytvoř klíč a vlož ho do <code>ANTHROPIC_API_KEY</code>.
@@ -369,11 +372,80 @@ function IntegrationsSection() {
           <li>
             <b className="text-white">Gemini:</b> na aistudio.google.com → Get API key a vlož do <code>GEMINI_API_KEY</code>.
           </li>
-          <li>
-            Restartuj aplikaci (<code>npm run dev</code>) a klikni na „Ověřit propojení“.
-          </li>
+          <li>Ulož a klikni na „Ověřit propojení“.</li>
         </ol>
       </details>
     </Section>
+  );
+}
+
+const KEY_FIELDS: Array<{ name: string; label: string; placeholder: string; secret: boolean }> = [
+  { name: 'ANTHROPIC_API_KEY', label: 'Claude API klíč', placeholder: 'sk-ant-…', secret: true },
+  { name: 'SHOPIFY_STORE', label: 'Shopify obchod (část před .myshopify.com)', placeholder: 'např. offsidestore', secret: false },
+  { name: 'SHOPIFY_CLIENT_ID', label: 'Shopify Client ID', placeholder: 'z Dev Dashboardu', secret: false },
+  { name: 'SHOPIFY_CLIENT_SECRET', label: 'Shopify Client secret', placeholder: 'z Dev Dashboardu', secret: true },
+  { name: 'SHOPIFY_ADMIN_TOKEN', label: 'nebo starší Shopify token (shpat_…)', placeholder: 'jen u starší aplikace', secret: true },
+  { name: 'GEMINI_API_KEY', label: 'Gemini API klíč', placeholder: 'AIza…', secret: true },
+];
+
+function KeysForm({ onSaved }: { onSaved: () => void }) {
+  const [info, setInfo] = useState<{ editable: boolean; keys: Record<string, string> } | null>(null);
+  const [values, setValues] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    api.keys().then(setInfo).catch(() => setInfo(null));
+  }, []);
+
+  if (!info?.editable) return null;
+
+  async function save(e: FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      await api.saveKeys(values);
+      setValues({});
+      setInfo(await api.keys());
+      toast('Klíče uloženy (šifrovaně v tomto počítači).');
+      onSaved();
+    } catch (err) {
+      toast((err as Error).message, 'error');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <form onSubmit={save} className="space-y-3 rounded-2xl border border-line bg-bg/50 p-4">
+      <div className="grid gap-3 md:grid-cols-2">
+        {KEY_FIELDS.map((f) => {
+          const current = info.keys[f.name];
+          return (
+            <Field key={f.name} label={f.label} hint={current ? `Uloženo: ${current}` : 'Zatím nenastaveno'}>
+              <div className="flex gap-1">
+                <input
+                  id={`key-${f.name}`}
+                  className="input font-mono text-sm"
+                  type={f.secret ? 'password' : 'text'}
+                  autoComplete="off"
+                  placeholder={current ? 'ponechat beze změny' : f.placeholder}
+                  value={values[f.name] ?? ''}
+                  onChange={(e) => setValues((v) => ({ ...v, [f.name]: e.target.value }))}
+                />
+                {current && (
+                  <button type="button" className="btn-icon" title="Smazat uložený klíč" onClick={() => setValues((v) => ({ ...v, [f.name]: '' }))}>
+                    <Trash2 size={15} />
+                  </button>
+                )}
+              </div>
+              {values[f.name] === '' && current && <span className="mt-1 block text-xs text-danger">Po uložení se smaže.</span>}
+            </Field>
+          );
+        })}
+      </div>
+      <button className="btn-primary" disabled={saving || Object.keys(values).length === 0}>
+        {saving ? <Loader2 size={15} className="animate-spin" /> : <KeyRound size={15} />} Uložit klíče
+      </button>
+    </form>
   );
 }

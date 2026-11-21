@@ -187,3 +187,30 @@ describe('Shopify klient (simulované API)', () => {
     expect(shopDomain('https://offsidestore.myshopify.com/admin')).toBe('offsidestore.myshopify.com');
   });
 });
+
+describe('klíče v desktopové aplikaci', () => {
+  it('maskuje tajné klíče a ukládá jen povolené hodnoty', async () => {
+    const env: Record<string, string | undefined> = { ANTHROPIC_API_KEY: 'sk-ant-1234567890abcd', SHOPIFY_STORE: 'offsidestore' };
+    let saved: Record<string, string> | null = null;
+    const h = createHandler(env, {
+      saveKeys: (v) => {
+        saved = v as Record<string, string>;
+        Object.assign(env, v);
+      },
+    });
+    const r = await call(h, fakeReq('GET', '/api/keys', OK));
+    expect(r.body.editable).toBe(true);
+    expect((r.body.keys as Record<string, string>).ANTHROPIC_API_KEY).toBe('sk-a…abcd');
+    expect((r.body.keys as Record<string, string>).SHOPIFY_STORE).toBe('offsidestore');
+    expect(JSON.stringify(r.body)).not.toContain('1234567890');
+
+    await call(h, fakeReq('POST', '/api/keys', OK, { GEMINI_API_KEY: ' AIzaXYZ ', EVIL: 'x', PATH: '/tmp' }));
+    expect(saved).toEqual({ GEMINI_API_KEY: 'AIzaXYZ' });
+    const st = await call(h, fakeReq('GET', '/api/status', OK));
+    expect(st.body).toMatchObject({ gemini: { configured: true } });
+  });
+  it('ve vývojové verzi klíče měnit nejde', async () => {
+    const r = await call(createHandler({}), fakeReq('POST', '/api/keys', OK, { ANTHROPIC_API_KEY: 'x' }));
+    expect(r.status).toBe(400);
+  });
+});

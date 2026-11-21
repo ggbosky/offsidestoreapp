@@ -7,3 +7,6 @@ dist-electron
 !.env.example
 .DS_Store
 *.zip
+release
+dist-electron
+*.tsbuildinfo

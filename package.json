@@ -4,7 +4,7 @@
   "version": "2.0.0",
   "description": "Offsidestore Studio – obsah na sítě a CRM pro hokejové náramky",
   "type": "module",
-  "main": "electron/main.cjs",
+  "main": "dist-electron/main.cjs",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
@@ -12,28 +12,77 @@
     "typecheck": "tsc -b",
     "test": "vitest run",
     "hash-password": "node scripts/hash-password.mjs",
-    "electron": "npm run build && electron .",
-    "start": "npm run build && vite preview --open"
-  },
-  "dependencies": {
-    "@anthropic-ai/sdk": "^1.11.0",
-    "@fontsource-variable/assistant": "^5.3.0",
-    "lucide-react": "^1.76.0",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "zod": "^4.6.7",
-    "zustand": "^5.1.0"
+    "start": "npm run build && vite preview --open",
+    "build:electron": "node scripts/build-electron.mjs",
+    "app": "npm run build && npm run build:electron && electron .",
+    "dist:win": "npm run build && npm run build:electron && electron-builder --win portable --x64",
+    "dist:mac": "npm run build && npm run build:electron && electron-builder --mac dmg",
+    "dist:win-installer": "npm run build && npm run build:electron && electron-builder --win nsis --x64"
   },
   "devDependencies": {
+    "@anthropic-ai/sdk": "^1.11.0",
+    "@fontsource-variable/assistant": "^5.3.0",
     "@types/node": "^22.20.5",
     "@types/react": "^18.3.31",
     "@types/react-dom": "^18.3.7",
     "@vitejs/plugin-react": "^4.7.0",
     "autoprefixer": "^10.7.0",
+    "electron": "^45.4.1",
+    "electron-builder": "^26.18.0",
+    "esbuild": "^0.28.2",
+    "lucide-react": "^1.76.0",
     "postcss": "^8.5.33",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
     "tailwindcss": "^3.4.19",
     "typescript": "~5.6.3",
     "vite": "^5.4.21",
-    "vitest": "^2.1.9"
+    "vitest": "^2.1.9",
+    "zod": "^4.6.7",
+    "zustand": "^5.1.0"
+  },
+  "author": "Offsidestore",
+  "homepage": "https://offsidestore.cz",
+  "build": {
+    "appId": "cz.offsidestore.studio",
+    "productName": "Offsidestore Studio",
+    "copyright": "© Offsidestore",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*",
+      "package.json"
+    ],
+    "asar": true,
+    "win": {
+      "target": "nsis",
+      "icon": "build/icon.ico",
+      "signAndEditExecutable": true
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": "always",
+      "createStartMenuShortcut": true,
+      "shortcutName": "Offsidestore Studio",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "artifactName": "Offsidestore-Studio-Setup-${version}.${ext}",
+      "language": "1029",
+      "deleteAppDataOnUninstall": false
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "build/icon.png",
+      "category": "public.app-category.productivity"
+    },
+    "portable": {
+      "artifactName": "Offsidestore-Studio-${version}.exe",
+      "unpackDirName": "OffsidestoreStudio"
+    }
   }
 }

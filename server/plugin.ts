@@ -48,21 +48,39 @@ async function readJson<T>(req: IncomingMessage, limit = 1_000_000): Promise<T> 
   }
 }
 
-export function createHandler(env: Record<string, string | undefined>): Connect.NextHandleFunction {
-  const shop: ShopifyEnv = {
-    store: env.SHOPIFY_STORE ?? '',
-    clientId: env.SHOPIFY_CLIENT_ID,
-    clientSecret: env.SHOPIFY_CLIENT_SECRET,
-    adminToken: env.SHOPIFY_ADMIN_TOKEN,
-    apiVersion: env.SHOPIFY_API_VERSION || '2026-07',
-  };
-  const claudeModel = env.CLAUDE_MODEL || 'claude-opus-5-5';
-  const geminiModel = env.GEMINI_IMAGE_MODEL || 'gemini-nano-banana-2.1';
+/** Klíče, které lze nastavit v aplikaci (desktopová verze). */
+export const KEY_NAMES = ['ANTHROPIC_API_KEY', 'SHOPIFY_STORE', 'SHOPIFY_CLIENT_ID', 'SHOPIFY_CLIENT_SECRET', 'SHOPIFY_ADMIN_TOKEN', 'GEMINI_API_KEY'] as const;
+export type KeyName = (typeof KEY_NAMES)[number];
+const PLAIN_KEYS = new Set<KeyName>(['SHOPIFY_STORE', 'SHOPIFY_CLIENT_ID']);
+
+/** Zamaskuje tajný klíč pro zobrazení (nikdy neposílá celý). */
+export function maskKey(name: KeyName, v: string | undefined): string {
+  if (!v) return '';
+  if (PLAIN_KEYS.has(name)) return v;
+  return v.length <= 8 ? '••••' : `${v.slice(0, 4)}…${v.slice(-4)}`;
+}
+
+export interface HandlerOptions {
+  /** Desktop: uloží klíče (šifrovaně) a zapíše je do env. Bez něj se klíče mění jen v .env. */
+  saveKeys?: (values: Partial<Record<KeyName, string>>) => void;
+}
+
+/** env se čte při každém požadavku, takže změna klíčů v aplikaci platí hned. */
+export function createHandler(env: Record<string, string | undefined>, options: HandlerOptions = {}): Connect.NextHandleFunction {
   let trendsCache: { at: number; geo: string; data: unknown } | null = null;
 
   return async (req, res, next) => {
     const url = new URL(req.url ?? '/', 'http://localhost');
     if (!url.pathname.startsWith('/api/')) return next();
+    const shop: ShopifyEnv = {
+      store: env.SHOPIFY_STORE ?? '',
+      clientId: env.SHOPIFY_CLIENT_ID,
+      clientSecret: env.SHOPIFY_CLIENT_SECRET,
+      adminToken: env.SHOPIFY_ADMIN_TOKEN,
+      apiVersion: env.SHOPIFY_API_VERSION || '2026-07',
+    };
+    const claudeModel = env.CLAUDE_MODEL || 'claude-opus-5-5';
+    const geminiModel = env.GEMINI_IMAGE_MODEL || 'gemini-nano-banana-2.1';
 
     // Ochrana: jen z tohoto počítače a jen z vlastní stránky (ne z cizích webů).
     const host = req.headers.host ?? '';
@@ -79,6 +97,25 @@ export function createHandler(env: Record<string, string | undefined>): Connect.
           gemini: { configured: !!env.GEMINI_API_KEY, model: geminiModel },
         };
         return send(res, 200, status);
+      }
+
+      if (url.pathname === '/api/keys' && req.method === 'GET') {
+        return send(res, 200, {
+          editable: !!options.saveKeys,
+          keys: Object.fromEntries(KEY_NAMES.map((k) => [k, maskKey(k, env[k])])),
+        });
+      }
+
+      if (url.pathname === '/api/keys' && req.method === 'POST') {
+        if (!options.saveKeys) return send(res, 400, { error: 'Ve vývojové verzi se klíče nastavují v souboru .env.' });
+        const body = await readJson<Partial<Record<string, unknown>>>(req);
+        const values: Partial<Record<KeyName, string>> = {};
+        for (const k of KEY_NAMES) {
+          const v = body[k];
+          if (typeof v === 'string') values[k] = v.trim();
+        }
+        options.saveKeys(values);
+        return send(res, 200, { ok: true });
       }
 
       if (url.pathname === '/api/shopify/summary' && req.method === 'POST') {

@@ -22,5 +22,7 @@ export const api = {
   shopifySummary: (clubs: Club[], days = 30) => call<ShopifySummary>('/api/shopify/summary', { method: 'POST', body: JSON.stringify({ clubs, days }) }),
   googleTrends: (geo = 'CZ') => call<GoogleTrend[]>(`/api/trends/google?geo=${geo}`),
   findTrends: (body: TrendRequestBody) => call<TrendResearchResult>('/api/ai/trends', { method: 'POST', body: JSON.stringify(body) }),
+  keys: () => call<{ editable: boolean; keys: Record<string, string> }>('/api/keys'),
+  saveKeys: (values: Record<string, string>) => call<{ ok: true }>('/api/keys', { method: 'POST', body: JSON.stringify(values) }),
   editImage: (prompt: string, image: string) => call<{ image: string; text: string }>('/api/ai/image', { method: 'POST', body: JSON.stringify({ prompt, image }) }),
 };

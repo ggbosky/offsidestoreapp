@@ -14,24 +14,24 @@ Ze Shopify si bere jen to, co pomáhá obsahu a vztahům (co se prodává, co ro
 - ✨ **Generátor** – texty v hlasu značky, háčky, nápady na natáčení, hashtagy + vizuál 4:5 / 9:16 ke stažení jako PNG; vše jde jedním klikem uložit do plánu
 - 💾 Data v `localStorage`, **záloha a obnova** jedním klikem (JSON)
 
-## Spuštění na PC
+## Desktopová aplikace (Windows)
+
+**`Offsidestore-Studio-2.0.0.exe`** – stáhnout a spustit dvojklikem. Nic se neinstaluje, nepotřebuje Node.js ani prohlížeč, otevře se ve vlastním okně.
+
+- Při prvním spuštění může Windows ukázat „Systém Windows ochránil počítač“ (aplikace není podepsaná certifikátem) → **Další informace → Přesto spustit**.
+- Doporučení: přesuňte `.exe` třeba do Dokumentů a vytvořte si zástupce na ploše (pravým tlačítkem → Odeslat → Plocha).
+- Data (obsah, kontakty, nastavení) a klíče zůstávají v profilu uživatele (`%APPDATA%\offsidestore-studio`), takže přežijí i nahrazení `.exe` novou verzí. Klíče jsou šifrované systémem Windows (DPAPI) pod vaším účtem.
+- Klíče pro Claude, Shopify a Gemini se zadávají přímo v aplikaci: **Nastavení → Propojení**.
+
+Sestavení z kódu: `npm run dist:win` (přenosné `.exe`), `npm run dist:win-installer` (instalačka – na Linuxu/Macu vyžaduje Wine), `npm run dist:mac` (na Macu). Výsledek je ve složce `release/`.
+
+## Vývoj
 
 Potřebujete [Node.js 20+](https://nodejs.org) (LTS).
 
-**Nejjednodušší:** dvojklik na `spustit-windows.bat` (Windows) nebo `spustit-mac.command` (Mac). Poprvé nainstaluje závislosti, vytvoří `.env` a otevře aplikaci v prohlížeči. Okno s příkazovou řádkou nechte otevřené, dokud aplikaci používáte.
+### Propojení se Shopify, Claude a Gemini (vývojová verze)
 
-Ručně:
-
-```bash
-npm install
-npm run dev
-```
-
-Otevře se `http://localhost:5173`. **Výchozí heslo: `offside2026`** (změňte ho v Nastavení → Zabezpečení).
-
-### Propojení se Shopify, Claude a Gemini
-
-Zkopírujte `.env.example` jako `.env` a doplňte klíče (podrobný návod je i v aplikaci: Nastavení → Propojení):
+V desktopové aplikaci se klíče zadávají v Nastavení → Propojení. Ve vývojové verzi (`npm run dev`) zkopírujte `.env.example` jako `.env` a doplňte je tam:
 
 | Proměnná | Kde ji vzít | K čemu |
 |---|---|---|
@@ -52,25 +52,13 @@ Ostatní příkazy:
 | `npm start` | sestaví aplikaci a spustí ji i s lokálním serverem (trendy, Shopify, Gemini) |
 | `npm run build` | produkční sestavení do `dist/` (bez serveru funguje jen offline část) |
 | `npm run preview` | spustí sestavenou verzi |
-| `npm test` | testy logiky (ceník, sklad, zálohy, heslo) |
+| `npm test` | testy (ceník, data, zálohy, heslo, Shopify, API, klíče) |
 | `npm run hash-password -- "NoveHeslo"` | vygeneruje hash pro `.env` |
 
-### Jako desktopová aplikace
+| `npm run app` | spustí desktopovou verzi (Electron) z kódu |
+| `npm run dist:win` | sestaví přenosné `.exe` pro Windows do `release/` |
 
-**Electron** (připravený soubor `electron/main.cjs`):
-
-```bash
-npm i -D electron
-npm run electron
-```
-
-Instalátor (.exe/.dmg) pak vyrobíte např. přes `electron-builder` (`npx electron-builder --win`).
-
-> Electron/Tauri obal zatím spouští jen offline část. Pro trendy, Shopify a Gemini používejte `npm run dev` nebo `npm start` (server běží uvnitř Vite).
-
-**Tauri** (menší instalátor, vyžaduje Rust): `npm i -D @tauri-apps/cli && npx tauri init` – jako *frontend dist* zadejte `../dist`, *dev URL* `http://localhost:5173`, *before build* `npm run build`.
-
-> Pozn.: Electron/Tauri mají vlastní úložiště – data z prohlížeče se nepřenesou automaticky. Použijte Export zálohy v prohlížeči a Import v aplikaci.
+> Desktopová aplikace má vlastní úložiště – data z prohlížeče nebo z online verze se nepřenesou automaticky. Použijte Stáhnout zálohu tam a Nahrát zálohu v aplikaci.
 
 ## Architektura
 
@@ -90,7 +78,7 @@ src/
     trends/              ← Radar trendů, karty nápadů, Gemini studio
     shopify/             ← panel s daty a nápady z prodejů
 server/                  ← lokální API (Vite plugin): Shopify GraphQL, Google Trends RSS, Claude (web search + structured outputs), Gemini
-electron/main.cjs        ← Electron obal
+electron/main.ts         ← desktopová aplikace: okno, vestavěný server (127.0.0.1:43117), šifrované klíče
 ```
 
 Stack: **React 18 + TypeScript + Vite + Tailwind CSS + Zustand**, ikony lucide-react, písmo Assistant (jako na webu) přibalené lokálně – funguje offline.
