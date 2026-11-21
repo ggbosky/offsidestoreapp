@@ -34,6 +34,16 @@ jobs:
       - name: Instalačka a přenosná verze
         run: npx electron-builder --win nsis portable --x64 --publish never
 
+      - name: Zabalit do ZIPu (prohlížeče neblokují)
+        shell: pwsh
+        run: |
+          Rename-Item "release/win-unpacked" "Offsidestore Studio"
+          Compress-Archive -Path "release/Offsidestore Studio" -DestinationPath "release/Offsidestore-Studio-Windows.zip"
+          $setup = Get-ChildItem "release/Offsidestore-Studio-Setup-*.exe" | Select-Object -First 1
+          Copy-Item $setup.FullName "release/Offsidestore-Studio-Instalace.exe"
+          Compress-Archive -Path "release/Offsidestore-Studio-Instalace.exe" -DestinationPath "release/Offsidestore-Studio-Instalace.zip"
+          Get-ChildItem release/*.zip | Format-Table Name, Length
+
       - name: Zveřejnit ke stažení
         uses: softprops/action-gh-release@v2
         with:
@@ -42,12 +52,21 @@ jobs:
           name: Offsidestore Studio pro Windows (sestavení ${{ github.run_number }})
           make_latest: true
           body: |
-            **Ke stažení:**
-            - `Offsidestore-Studio-Setup-*.exe` – instalačka (doporučeno): nainstaluje aplikaci a vytvoří ikonu na ploše.
-            - `Offsidestore-Studio-*.exe` – přenosná verze bez instalace.
+            ## Stažení
 
-            Při prvním spuštění Windows může ukázat „Systém Windows ochránil počítač“ → Další informace → Přesto spustit.
-            Heslo: offside2026
+            **[⬇️ Offsidestore-Studio-Windows.zip](https://github.com/${{ github.repository }}/releases/latest/download/Offsidestore-Studio-Windows.zip)** – doporučeno, bez instalace
+            1. Stáhni ZIP a ve složce Stažené soubory na něj klikni pravým tlačítkem → **Extrahovat vše…** → Extrahovat.
+            2. Rozbalenou složku **Offsidestore Studio** přesuň třeba do Dokumentů.
+            3. Ve složce dvakrát klikni na **Offsidestore Studio.exe**. Zástupce na plochu: pravým tlačítkem na soubor → Odeslat → Plocha.
+
+            **[⬇️ Offsidestore-Studio-Instalace.zip](https://github.com/${{ github.repository }}/releases/latest/download/Offsidestore-Studio-Instalace.zip)** – klasická instalačka (ikona na ploše a ve Startu)
+
+            ## Když Windows nebo prohlížeč varuje
+            Aplikace zatím není podepsaná placeným certifikátem vydavatele, proto ji Windows nezná. Je to normální u nových aplikací.
+            - **Edge / Chrome blokuje stažení:** v seznamu stažených souborů klikni na **…** → **Ponechat** → **Přesto ponechat** (Edge: „Zobrazit další“ → „Přesto ponechat“).
+            - **„Systém Windows ochránil počítač“:** klikni na **Další informace** → **Přesto spustit**.
+
+            Heslo do aplikace: **offside2026** · Klíče pro trendy, Shopify a Gemini: v aplikaci *Nastavení → Propojení*.
           files: |
-            release/Offsidestore-Studio-Setup-*.exe
-            release/Offsidestore-Studio-*.exe
+            release/Offsidestore-Studio-Windows.zip
+            release/Offsidestore-Studio-Instalace.zip
