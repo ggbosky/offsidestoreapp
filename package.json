@@ -83,6 +83,12 @@
     "portable": {
       "artifactName": "Offsidestore-Studio-${version}.exe",
       "unpackDirName": "OffsidestoreStudio"
-    }
+    },
+    "electronLanguages": [
+      "cs",
+      "sk",
+      "en-US"
+    ],
+    "compression": "maximum"
   }
 }
