@@ -18,6 +18,10 @@ Ze Shopify si bere jen to, co pomáhá obsahu a vztahům (co se prodává, co ro
 
 Potřebujete [Node.js 20+](https://nodejs.org) (LTS).
 
+**Nejjednodušší:** dvojklik na `spustit-windows.bat` (Windows) nebo `spustit-mac.command` (Mac). Poprvé nainstaluje závislosti, vytvoří `.env` a otevře aplikaci v prohlížeči. Okno s příkazovou řádkou nechte otevřené, dokud aplikaci používáte.
+
+Ručně:
+
 ```bash
 npm install
 npm run dev
