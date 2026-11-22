@@ -156,12 +156,7 @@ function DownloadBox() {
       <a href={DOWNLOAD.installer} target="_blank" rel="noreferrer" className="btn-ghost w-full border-white/25 py-3 text-base" onClick={() => setHelp(true)}>
         <Download size={18} /> Stáhnout pro Windows
       </a>
-      <p className="mt-2 text-center text-xs text-faint">
-        Desktopová aplikace se vším (trendy, Shopify, Gemini) ·{' '}
-        <a href={DOWNLOAD.portable} target="_blank" rel="noreferrer" className="underline hover:text-white">
-          verze bez instalace
-        </a>
-      </p>
+      <p className="mt-2 text-center text-xs text-faint">Desktopová aplikace se vším (trendy, Shopify, Gemini) · instalační soubor .exe</p>
       <button type="button" className="mx-auto mt-2 block text-xs font-bold text-muted hover:text-white" onClick={() => setHelp((v) => !v)}>
         {help ? 'Skrýt návod' : 'Jak nainstalovat?'}
       </button>
@@ -169,10 +164,10 @@ function DownloadBox() {
         <ol className="mt-3 list-decimal space-y-1.5 pl-5 text-sm text-muted">
           <li>Stažení se otevře na GitHubu (musíš být přihlášený svým účtem).</li>
           <li>
-            Ve Stažených souborech na ZIP klikni pravým tlačítkem → <b className="text-white">Extrahovat vše</b>.
+            Ve Stažených souborech spusť <b className="text-white">Offsidestore-Studio-Instalace.exe</b> a projdi instalací – vytvoří ikonu na ploše.
           </li>
           <li>
-            Spusť <b className="text-white">Offsidestore-Studio-Instalace.exe</b> a projdi instalací – vytvoří ikonu na ploše.
+            Když prohlížeč stažení zastaví: u souboru <b className="text-white">… → Ponechat → Přesto ponechat</b>.
           </li>
           <li>
             Varování Windows: <b className="text-white">Další informace → Přesto spustit</b>. Avast: počkej na dokončení testu, případně{' '}

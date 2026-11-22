@@ -26,10 +26,7 @@ export const DOWNLOAD = {
   releaseTag: 'studio-2',
   repo: 'ggbosky/offsidestoreapp',
   get installer() {
-    return `https://github.com/${this.repo}/releases/download/${this.releaseTag}/Offsidestore-Studio-Instalace.zip`;
-  },
-  get portable() {
-    return `https://github.com/${this.repo}/releases/download/${this.releaseTag}/Offsidestore-Studio-Windows.zip`;
+    return `https://github.com/${this.repo}/releases/download/${this.releaseTag}/Offsidestore-Studio-Instalace.exe`;
   },
   get page() {
     return `https://github.com/${this.repo}/releases/tag/${this.releaseTag}`;
