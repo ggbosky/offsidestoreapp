@@ -69,5 +69,6 @@ jobs:
 
             Heslo do aplikace: **offside2026** · Klíče pro trendy, Shopify a Gemini: v aplikaci *Nastavení → Propojení*.
           files: |
+            release/Offsidestore-Studio-Instalace.exe
             release/Offsidestore-Studio-Windows.zip
             release/Offsidestore-Studio-Instalace.zip

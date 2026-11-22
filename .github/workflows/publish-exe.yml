@@ -1,0 +1,32 @@
+name: Zveřejnit instalačku jako EXE
+
+# Vytáhne instalačku ze ZIPu daného vydání a nahraje ji ke stejnému vydání jako samostatné .exe.
+# Soubor zůstává bit po bitu stejný (antivirem už prověřený), jen se dá stáhnout bez rozbalování.
+on:
+  push:
+    paths: ['.github/workflows/publish-exe.yml']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Tag vydání
+        default: studio-2
+
+permissions:
+  contents: write
+
+jobs:
+  exe:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: ${{ inputs.tag || 'studio-2' }}
+    steps:
+      - name: Stáhnout ZIP z vydání
+        run: gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern Offsidestore-Studio-Instalace.zip
+      - name: Rozbalit
+        run: |
+          unzip -o Offsidestore-Studio-Instalace.zip
+          ls -la
+          sha256sum Offsidestore-Studio-Instalace.exe
+      - name: Nahrát .exe k vydání
+        run: gh release upload "$TAG" Offsidestore-Studio-Instalace.exe --repo "$GITHUB_REPOSITORY" --clobber
