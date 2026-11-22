@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
-import { ArrowRight, Eye, EyeOff, Lock, ShieldAlert } from 'lucide-react';
+import { ArrowRight, Download, Eye, EyeOff, Lock, ShieldAlert } from 'lucide-react';
 import { Logo } from '../../components/Logo';
 import { BraceletGraphic } from '../../components/BraceletGraphic';
 import { verifyPassword } from '../../lib/auth';
 import { useData } from '../../store/data';
 import { useLock } from '../../store/lock';
-import { BRAND, LOCK_COOLDOWN_SECONDS, LOCK_MAX_ATTEMPTS } from '../../config';
+import { BRAND, DOWNLOAD, IS_DESKTOP_APP, LOCK_COOLDOWN_SECONDS, LOCK_MAX_ATTEMPTS } from '../../config';
 
 export function LockScreen() {
   const unlock = useLock((s) => s.unlock);
@@ -138,10 +138,51 @@ export function LockScreen() {
           </button>
         </form>
 
+        {!IS_DESKTOP_APP && <DownloadBox />}
+
         <p className="mt-6 text-center text-xs text-faint">
           {BRAND.web} · obsah, kontakty a nápady – data zůstávají jen v tomto počítači
         </p>
       </div>
+    </div>
+  );
+}
+
+/** Stažení desktopové aplikace – jen ve webové verzi. */
+function DownloadBox() {
+  const [help, setHelp] = useState(false);
+  return (
+    <div className="mt-5 rounded-2xl border border-line bg-surface/80 p-5 backdrop-blur">
+      <a href={DOWNLOAD.installer} target="_blank" rel="noreferrer" className="btn-ghost w-full border-white/25 py-3 text-base" onClick={() => setHelp(true)}>
+        <Download size={18} /> Stáhnout pro Windows
+      </a>
+      <p className="mt-2 text-center text-xs text-faint">
+        Desktopová aplikace se vším (trendy, Shopify, Gemini) ·{' '}
+        <a href={DOWNLOAD.portable} target="_blank" rel="noreferrer" className="underline hover:text-white">
+          verze bez instalace
+        </a>
+      </p>
+      <button type="button" className="mx-auto mt-2 block text-xs font-bold text-muted hover:text-white" onClick={() => setHelp((v) => !v)}>
+        {help ? 'Skrýt návod' : 'Jak nainstalovat?'}
+      </button>
+      {help && (
+        <ol className="mt-3 list-decimal space-y-1.5 pl-5 text-sm text-muted">
+          <li>Stažení se otevře na GitHubu (musíš být přihlášený svým účtem).</li>
+          <li>
+            Ve Stažených souborech na ZIP klikni pravým tlačítkem → <b className="text-white">Extrahovat vše</b>.
+          </li>
+          <li>
+            Spusť <b className="text-white">Offsidestore-Studio-Instalace.exe</b> a projdi instalací – vytvoří ikonu na ploše.
+          </li>
+          <li>
+            Varování Windows: <b className="text-white">Další informace → Přesto spustit</b>. Avast: počkej na dokončení testu, případně{' '}
+            <b className="text-white">Další možnosti</b>.
+          </li>
+          <li>
+            Heslo: <b className="text-white">offside2026</b>. Klíče pro trendy a Shopify zadáš v aplikaci v Nastavení → Propojení.
+          </li>
+        </ol>
+      )}
     </div>
   );
 }

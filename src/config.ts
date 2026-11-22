@@ -17,6 +17,28 @@ export const BRAND = {
   logoSrc: null as string | null,
 };
 
+/**
+ * Stažení desktopové aplikace pro Windows (tlačítko na úvodní obrazovce webové verze).
+ * Odkazuje na konkrétní, už prověřené sestavení – antiviry (Avast…) hodnotí každý soubor zvlášť,
+ * takže nové sestavení by se kontrolovalo znovu. Po vydání nové verze stačí změnit tag zde.
+ */
+export const DOWNLOAD = {
+  releaseTag: 'studio-2',
+  repo: 'ggbosky/offsidestoreapp',
+  get installer() {
+    return `https://github.com/${this.repo}/releases/download/${this.releaseTag}/Offsidestore-Studio-Instalace.zip`;
+  },
+  get portable() {
+    return `https://github.com/${this.repo}/releases/download/${this.releaseTag}/Offsidestore-Studio-Windows.zip`;
+  },
+  get page() {
+    return `https://github.com/${this.repo}/releases/tag/${this.releaseTag}`;
+  },
+};
+
+/** Běží uvnitř desktopové aplikace (Electron servíruje z 127.0.0.1:43117)? */
+export const IS_DESKTOP_APP = typeof location !== 'undefined' && location.port === '43117';
+
 /** Barvy tkaniček z konfigurátoru na offsidestore.cz */
 export const LACE_COLORS: Array<{ hex: string; name: string }> = [
   { hex: '#B01E28', name: 'Červená' },

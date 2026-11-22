@@ -1,9 +1,10 @@
 name: Windows aplikace
 
 # Sestaví Offsidestore Studio na Windows a zveřejní ho ke stažení v sekci Releases.
+# Spouští se jen ručně (Actions → Windows aplikace → Run workflow): antiviry hodnotí každý
+# nový soubor znovu, takže nové vydání dělej jen při skutečné změně desktopové aplikace
+# a pak uprav DOWNLOAD.releaseTag v src/config.ts.
 on:
-  push:
-    branches: [main, claude/confident-carson-59kwxk]
   workflow_dispatch:
 
 permissions:
