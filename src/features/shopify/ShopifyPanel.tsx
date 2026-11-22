@@ -54,7 +54,7 @@ export function ShopifyPanel() {
         <p className="text-sm text-muted">
           {configured
             ? 'Načti objednávky a uvidíš, které kluby rostou, nejčastější nápisy a nápady na příspěvky z dat.'
-            : 'Shopify zatím není propojený. Návod je v Nastavení → Propojení (stačí doplnit údaje do souboru .env).'}
+            : 'Shopify zatím není propojený. Údaje vyplň v Nastavení → Propojení.'}
         </p>
       </section>
     );

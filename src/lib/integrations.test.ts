@@ -5,6 +5,7 @@ import { Readable } from 'node:stream';
 import { detectClub, nextMilestone, parseGoogleTrendsRss, risingClubs, summarizeOrders, summaryForPrompt } from './shopifyStats';
 import { importRepeatCustomers, syncBraceletsFromProducts, tipsFromShopify } from './shopifySync';
 import { createSeedData } from '../data/seed';
+import { newContact, removeDemoData } from '../store/data';
 import { createHandler } from '../../server/plugin';
 import { fetchOrders, shopDomain } from '../../server/shopify';
 import { ideaToContent, isExpired } from '../features/trends/ideaToContent';
@@ -68,13 +69,13 @@ describe('Shopify synchronizace', () => {
     expect(r.bracelets.find((b) => b.id === 'b-spa')?.photo).toBe('https://cdn.shopify.com/spa.jpg');
   });
   it('stálí zákazníci bez duplicit', () => {
-    const d = createSeedData();
+    const existing = [newContact({ name: 'Fanshop', kind: 'obchod', email: 'info@example.cz' })];
     const out = importRepeatCustomers(
       [
         { name: 'Info', email: 'info@example.cz', city: null, orders: 2 },
         { name: 'Pavla', email: 'pavla@example.cz', city: 'Zlín', orders: 4 },
       ],
-      d.contacts,
+      existing,
     );
     expect(out.map((c) => c.name)).toEqual(['Pavla']);
     expect(out[0]).toMatchObject({ kind: 'ambasador', stage: 'tip' });
@@ -146,9 +147,10 @@ describe('lokální API – zabezpečení a stav', () => {
     const empty = createHandler({});
     const r = await call(empty, fakeReq('POST', '/api/ai/trends', { ...OK, origin: 'http://localhost:5173' }, {}));
     expect(r.status).toBe(400);
-    expect(String(r.body.error)).toContain('ANTHROPIC_API_KEY');
+    expect(String(r.body.error)).toContain('Claude API klíč');
+    expect(String(r.body.error)).toContain('Nastavení → Propojení');
     const g = await call(empty, fakeReq('POST', '/api/ai/image', OK, { prompt: 'x', image: 'data:image/png;base64,AAA' }));
-    expect(String(g.body.error)).toContain('GEMINI_API_KEY');
+    expect(String(g.body.error)).toContain('Gemini API klíč');
   });
   it('ne-API cesty pustí dál', async () => {
     expect((await call(handler, fakeReq('GET', '/index.html', OK))).status).toBe(0);
@@ -212,5 +214,30 @@ describe('klíče v desktopové aplikaci', () => {
   it('ve vývojové verzi klíče měnit nejde', async () => {
     const r = await call(createHandler({}), fakeReq('POST', '/api/keys', OK, { ANTHROPIC_API_KEY: 'x' }));
     expect(r.status).toBe(400);
+  });
+});
+
+describe('ukázková data', () => {
+  it('nová instalace nemá ukázkové kontakty ani náramky mimo e-shop', () => {
+    const d = createSeedData();
+    expect(d.contacts).toEqual([]);
+    expect(d.bracelets.every((b) => b.status === 'nabidka')).toBe(true);
+    expect(d.bracelets).toHaveLength(12);
+  });
+  it('z uložených dat smaže ukázky, ale vlastní kontakty a náramky nechá', () => {
+    const mine = newContact({ id: 'k-1', name: 'Můj skutečný kontakt' });
+    const out = removeDemoData({
+      contacts: [{ ...newContact({ id: 'k-2', name: 'Fanklub – kotel (ukázka)' }) }, mine],
+      bracelets: [
+        { id: 'b-idea-derby', name: 'Derby edice (ukázka nápadu)', clubId: null, letters: 'DERBY', laceColor: '#111111', status: 'napad', notes: '', createdAt: '' },
+        { id: 'b-spa', name: 'Sparta – SPA', clubId: 'spa', letters: 'SPA', laceColor: '#B01E28', status: 'nabidka', notes: '', createdAt: '' },
+      ],
+      content: [
+        { ...createSeedData().content[0], id: 'c-x', contactIds: ['k-2', 'k-1'], braceletIds: ['b-idea-derby', 'b-spa'] },
+      ],
+    });
+    expect(out.contacts?.map((c) => c.name)).toEqual(['Můj skutečný kontakt']);
+    expect(out.bracelets?.map((b) => b.id)).toEqual(['b-spa']);
+    expect(out.content?.[0]).toMatchObject({ contactIds: ['k-1'], braceletIds: ['b-spa'] });
   });
 });

@@ -80,7 +80,7 @@ export function ImageStudio({ open, onClose, initialPrompt }: { open: boolean; o
           </div>
           {!gemini?.configured && (
             <p className="rounded-xl bg-warn/10 p-3 text-sm text-warn">
-              Gemini není propojené (chybí GEMINI_API_KEY v .env). Prompt můžeš zkopírovat a vložit s fotkou do aplikace Gemini.
+              Gemini není propojené (klíč vlož v Nastavení → Propojení). Prompt můžeš zkopírovat a vložit s fotkou do aplikace Gemini.
             </p>
           )}
         </div>

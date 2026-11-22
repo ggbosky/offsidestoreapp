@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import type { AppData, Bracelet, Club, Contact, ContentItem, ContentStage, CrmStage, Interaction, KeyDate, Settings, TrendBrief } from '../types';
 import type { ShopifySummary, TrendIdea } from '../lib/integrations';
-import { createSeedData } from '../data/seed';
+import { createSeedData, DEMO_BRACELET_IDS, DEMO_CONTACT_IDS, DEMO_CONTENT_IDS } from '../data/seed';
 import { uid } from '../lib/id';
 import { today } from '../lib/dates';
 
@@ -101,6 +101,28 @@ export function pickData(s: AppData): AppData {
   return { schemaVersion, clubs, bracelets, content, keyDates, contacts, settings, trendIdeas, trendBrief, shopify };
 }
 
+/** Odstraní ukázkové kontakty a ukázkové náramky (nejsou na e-shopu) z uložených dat. */
+export function removeDemoData<T extends Partial<AppData>>(d: T): T {
+  const isDemoContact = (c: Contact) => DEMO_CONTACT_IDS.has(c.id) && c.name.includes('(ukázka)');
+  const isDemoBracelet = (b: Bracelet) => DEMO_BRACELET_IDS.has(b.id) && b.name.includes('(ukázka');
+  const contactIds = new Set((d.contacts ?? []).filter(isDemoContact).map((c) => c.id));
+  const braceletIds = new Set((d.bracelets ?? []).filter(isDemoBracelet).map((b) => b.id));
+  return {
+    ...d,
+    ...(d.contacts && { contacts: d.contacts.filter((c) => !contactIds.has(c.id)) }),
+    ...(d.bracelets && { bracelets: d.bracelets.filter((b) => !braceletIds.has(b.id)) }),
+    ...(d.content && {
+      content: d.content
+        .filter((c) => !(DEMO_CONTENT_IDS.has(c.id) && c.title.includes('(ukázka)')))
+        .map((c) => ({
+          ...c,
+          contactIds: c.contactIds.filter((id) => !contactIds.has(id)),
+          braceletIds: c.braceletIds.filter((id) => !braceletIds.has(id)),
+        })),
+    }),
+  };
+}
+
 export const useData = create<DataStore>()(
   persist(
     (set, get) => ({
@@ -157,7 +179,7 @@ export const useData = create<DataStore>()(
       clearDismissedTrends: () => set((s) => ({ trendIdeas: s.trendIdeas.filter((i) => i.status !== 'zahozeno') })),
 
       updateSettings: (patch) => set((s) => ({ settings: { ...s.settings, ...patch } })),
-      replaceAll: (data) => set({ ...data }),
+      replaceAll: (data) => set({ ...removeDemoData(data) }),
       resetDemo: () => {
         const keep = get().settings;
         const seed = createSeedData();
@@ -167,7 +189,9 @@ export const useData = create<DataStore>()(
     }),
     {
       name: STORAGE_KEY,
-      version: 2,
+      version: 3,
+      // v3: pryč s ukázkovými kontakty a náramky, které nejsou na e-shopu
+      migrate: (persisted, version) => (version < 3 ? removeDemoData((persisted ?? {}) as Partial<AppData>) : persisted) as DataStore,
       storage: createJSONStorage(() => localStorage),
       partialize: (s) => pickData(s),
       // starší uložená data doplní o nové sekce a nastavení

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { CalendarPlus, ChevronDown, Copy, Eye, Flame, ImagePlus, Loader2, RefreshCw, Search, ShieldAlert, Sparkles, Trash2, TrendingUp, X } from 'lucide-react';
+import { CalendarPlus, ChevronDown, Copy, Eye, Flame, ImagePlus, KeyRound, Loader2, RefreshCw, Search, ShieldAlert, Sparkles, Trash2, TrendingUp, X } from 'lucide-react';
 import type { TrendIdea, TrendRisk } from '../../lib/integrations';
 import { useData } from '../../store/data';
 import { useUi } from '../../store/ui';
@@ -13,6 +13,7 @@ import { ImageStudio } from './ImageStudio';
 import { IntegrationPills } from './IntegrationPills';
 
 const PRESETS = [
+  'Hokejové kraviny – vtipné posty o hokeji bez náramku',
   'Meme formáty, které teď frčí',
   'Hokej tento týden (extraliga, NHL, reprezentace)',
   'Popkultura: hry, filmy, seriály, virály',
@@ -33,6 +34,7 @@ type Filter = 'novy' | 'sledovat' | 'pouzito' | 'zahozeno';
 export function TrendsPage() {
   const { trendIdeas, trendBrief, settings, shopify, bracelets, clubs, updateSettings, setTrendStatus, clearDismissedTrends, saveContent } = useData();
   const openContent = useUi((s) => s.openContent);
+  const setTab = useUi((s) => s.setTab);
   const { status, serverError, google, googleError, loadStatus, loadGoogle } = useIntegrations();
   const { busy, startedAt, error } = useTrendSearch();
   const [focus, setFocus] = useState(settings.trendFocus);
@@ -81,7 +83,7 @@ export function TrendsPage() {
 
       {serverError && (
         <div className="rounded-2xl border border-warn/40 bg-warn/10 p-4 text-sm text-warn">
-          <b>Lokální server neběží.</b> Trendy, Shopify a Gemini fungují jen v aplikaci spuštěné na tvém PC příkazem <code className="rounded bg-black/30 px-1">npm run dev</code> s vyplněným souborem <code className="rounded bg-black/30 px-1">.env</code> (návod v Nastavení → Propojení).
+          <b>Lokální server neběží.</b> Trendy, Shopify a Gemini fungují jen v desktopové aplikaci nebo ve verzi spuštěné přes <code className="rounded bg-black/30 px-1">npm start</code> – ne ve stránce otevřené přímo ze souboru.
         </div>
       )}
 
@@ -165,11 +167,13 @@ export function TrendsPage() {
                 {busy ? <Loader2 size={17} className="animate-spin" /> : <Sparkles size={17} />}
                 {busy ? `Hledám, co frčí… ${elapsed}s` : 'Najít trendy a vymyslet kraviny'}
               </button>
-              <span className="text-xs text-faint">
-                {canSearch
-                  ? 'Claude prohledá web (CZ/SK + svět, hokej, popkultura) a vymyslí 6–8 příspěvků. Trvá 1–3 minuty, stojí řádově jednotky až nízké desítky Kč.'
-                  : 'Pro hledání doplň ANTHROPIC_API_KEY do .env a spusť aplikaci přes npm run dev.'}
-              </span>
+              {canSearch ? (
+                <span className="text-xs text-faint">Claude prohledá web (CZ/SK + svět, hokej, popkultura) a vymyslí 6–8 příspěvků. Trvá 1–3 minuty, stojí řádově jednotky až nízké desítky Kč.</span>
+              ) : (
+                <button className="btn-ghost text-sm" onClick={() => setTab('settings')}>
+                  <KeyRound size={15} /> Vložit Claude API klíč v Nastavení
+                </button>
+              )}
             </div>
             {error && !busy && <p className="text-sm text-danger">{error}</p>}
           </section>

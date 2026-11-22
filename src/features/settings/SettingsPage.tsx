@@ -358,19 +358,17 @@ function IntegrationsSection() {
       <details className="rounded-xl border border-line bg-bg/50 p-4 text-sm text-muted">
         <summary className="cursor-pointer font-bold text-white">Kde klíče vzít (5 minut)</summary>
         <ol className="mt-3 list-decimal space-y-2 pl-5">
+          <li>Klíče vlož do formuláře výše a klikni na „Uložit klíče“. Zůstanou jen v tomto počítači a do prohlížeče se nikdy nedostanou.</li>
           <li>
-            V desktopové aplikaci klíče vlož do formuláře výše – uloží se šifrovaně jen v tomto počítači. (Ve vývojové verzi přes <code>npm run dev</code> se zadávají do souboru <code>.env</code>.)
-          </li>
-          <li>
-            <b className="text-white">Claude:</b> na platform.claude.com → API Keys vytvoř klíč a vlož ho do <code>ANTHROPIC_API_KEY</code>.
+            <b className="text-white">Claude:</b> na platform.claude.com → API Keys vytvoř klíč a vlož ho do pole „Claude API klíč“.
           </li>
           <li>
             <b className="text-white">Shopify:</b> v adminu Nastavení → Aplikace → Vývoj aplikací → vytvoř aplikaci v Dev Dashboardu. V konfiguraci zapni oprávnění
             <code> read_orders</code>, <code>read_products</code> (a volitelně <code>read_customers</code> + přístup k chráněným zákaznickým datům pro import stálých zákazníků), vydej verzi a nainstaluj ji do obchodu.
-            Do .env vlož <code>SHOPIFY_STORE</code> (část adresy před .myshopify.com), <code>SHOPIFY_CLIENT_ID</code> a <code>SHOPIFY_CLIENT_SECRET</code>. Máš-li starší aplikaci s tokenem <code>shpat_…</code>, stačí <code>SHOPIFY_ADMIN_TOKEN</code>.
+            Do formuláře vyplň obchod (část adresy před .myshopify.com), Client ID a Client secret. Máš-li starší aplikaci s tokenem <code>shpat_…</code>, stačí ten.
           </li>
           <li>
-            <b className="text-white">Gemini:</b> na aistudio.google.com → Get API key a vlož do <code>GEMINI_API_KEY</code>.
+            <b className="text-white">Gemini:</b> na aistudio.google.com → Get API key a vlož ho do pole „Gemini API klíč“.
           </li>
           <li>Ulož a klikni na „Ověřit propojení“.</li>
         </ol>
@@ -389,7 +387,7 @@ const KEY_FIELDS: Array<{ name: string; label: string; placeholder: string; secr
 ];
 
 function KeysForm({ onSaved }: { onSaved: () => void }) {
-  const [info, setInfo] = useState<{ editable: boolean; keys: Record<string, string> } | null>(null);
+  const [info, setInfo] = useState<{ editable: boolean; storage: 'encrypted' | 'file'; keys: Record<string, string> } | null>(null);
   const [values, setValues] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
 
@@ -406,7 +404,7 @@ function KeysForm({ onSaved }: { onSaved: () => void }) {
       await api.saveKeys(values);
       setValues({});
       setInfo(await api.keys());
-      toast('Klíče uloženy (šifrovaně v tomto počítači).');
+      toast(info?.storage === 'file' ? 'Klíče uloženy (soubor klice.local v tomto počítači).' : 'Klíče uloženy (šifrovaně v tomto počítači).');
       onSaved();
     } catch (err) {
       toast((err as Error).message, 'error');

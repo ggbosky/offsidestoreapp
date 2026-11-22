@@ -50,6 +50,7 @@ function persistKeys(keys: Partial<Record<KeyName, string>>) {
 
 function startServer(env: Record<string, string | undefined>): Promise<http.Server> {
   const api = createHandler(env, {
+    storage: 'encrypted',
     saveKeys: (values) => {
       for (const k of KEY_NAMES) {
         if (values[k] === undefined) continue;

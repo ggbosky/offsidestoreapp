@@ -1,4 +1,4 @@
-import type { AppData, Bracelet, Club, Contact, ContentItem, KeyDate, Settings } from '../types';
+import type { AppData, Bracelet, Club, ContentItem, KeyDate, Settings } from '../types';
 import { addDays, today } from '../lib/dates';
 
 /** Kluby a barvy tkaniček podle offsidestore.cz (fotky produktů). */
@@ -33,6 +33,12 @@ export const DEFAULT_SETTINGS: Settings = {
 
 const now = () => new Date().toISOString();
 
+/** Ukázková data ze starších verzí – při načtení uložených dat se odstraní. */
+export const DEMO_CONTACT_IDS = new Set(['k-1', 'k-2', 'k-3', 'k-4']);
+export const DEMO_BRACELET_IDS = new Set(['b-idea-derby', 'b-idea-xmas']);
+export const DEMO_CONTENT_IDS = new Set(['c-4']);
+
+/** Náramky = jen to, co je v nabídce na offsidestore.cz (12 klubů). */
 function seedBracelets(): Bracelet[] {
   const fromClubs = DEFAULT_CLUBS.map<Bracelet>((c) => ({
     id: `b-${c.id}`,
@@ -44,11 +50,7 @@ function seedBracelets(): Bracelet[] {
     notes: '',
     createdAt: now(),
   }));
-  return [
-    ...fromClubs,
-    { id: 'b-idea-derby', name: 'Derby edice (ukázka nápadu)', clubId: null, letters: 'DERBY', laceColor: '#111111', status: 'napad', notes: 'Černá tkanička, limitka k derby zápasům. Ověřit zájem anketou ve Stories.', createdAt: now() },
-    { id: 'b-idea-xmas', name: 'Vánoční dárek (ukázka nápadu)', clubId: null, letters: '♥ HOKEJ', laceColor: '#FFFFFF', status: 'limitka', notes: 'Bílá tkanička + kartička „Pod stromeček“.', createdAt: now() },
-  ];
+  return fromClubs;
 }
 
 function seedContent(): ContentItem[] {
@@ -103,23 +105,9 @@ function seedContent(): ContentItem[] {
       platforms: ['ig-story'],
       date: t,
       time: '20:00',
-      braceletIds: ['b-idea-derby'],
+      braceletIds: [],
       hook: 'Rozhodni ty 🗳️',
       caption: 'Černá DERBY, nebo klubová barva?',
-      shots: [],
-    },
-    {
-      ...base,
-      id: 'c-4',
-      title: 'Spolupráce: unboxing u tvůrce (ukázka)',
-      stage: 'idea',
-      pillar: 'spoluprace',
-      platforms: ['tiktok'],
-      date: null,
-      braceletIds: ['b-kom'],
-      contactIds: ['k-1'],
-      hook: '',
-      caption: '',
       shots: [],
     },
     {
@@ -135,76 +123,6 @@ function seedContent(): ContentItem[] {
       caption: 'Tribuna, šála, náramek. 🔥',
       shots: [],
       result: 'Story: hodně odpovědí na anketu. Příště přidat odkaz na konfigurátor.',
-    },
-  ];
-}
-
-function seedContacts(): Contact[] {
-  const t = today();
-  const base = { email: '', phone: '', tiktok: '', tags: [] as string[], createdAt: now(), updatedAt: now() };
-  return [
-    {
-      ...base,
-      id: 'k-1',
-      name: 'Hokejový vlogger (ukázka)',
-      kind: 'tvurce',
-      instagram: '@ukazka_hokejvlog',
-      tiktok: '@ukazka_hokejvlog',
-      followers: 18500,
-      clubIds: ['kom'],
-      stage: 'jednani',
-      nextAction: 'Poslat náramek KOM + domluvit termín videa',
-      nextDate: addDays(t, 1),
-      tags: ['unboxing', 'tiktok'],
-      notes: 'Fandí Kometě, točí vlogy ze zápasů. Chce náramek pro sebe i pro soutěž.',
-      interactions: [
-        { id: 'i1', date: addDays(t, -6), type: 'dm', text: 'Napsal jsem na IG, poslal odkaz na konfigurátor.' },
-        { id: 'i2', date: addDays(t, -4), type: 'dm', text: 'Odpověděl – má zájem, chce 2 kusy na giveaway.' },
-      ],
-    },
-    {
-      ...base,
-      id: 'k-2',
-      name: 'Fanklub – kotel (ukázka)',
-      kind: 'fanklub',
-      instagram: '@ukazka_fanklub',
-      followers: 3200,
-      clubIds: ['lit'],
-      stage: 'osloveno',
-      nextAction: 'Připomenout se – nabídka týmové edice pro členy',
-      nextDate: addDays(t, -1),
-      notes: 'Mají cca 150 členů. Možnost společné objednávky na výjezd.',
-      interactions: [{ id: 'i1', date: addDays(t, -8), type: 'email', text: 'Poslal jsem nabídku a fotky LIT.' }],
-    },
-    {
-      ...base,
-      id: 'k-3',
-      name: 'Fanshop u stadionu (ukázka)',
-      kind: 'obchod',
-      instagram: '',
-      email: 'info@example.cz',
-      followers: null,
-      clubIds: ['spa'],
-      stage: 'tip',
-      nextAction: 'Zajít osobně s ukázkovou sadou',
-      nextDate: addDays(t, 5),
-      notes: 'Komisní prodej? Zjistit podmínky.',
-      interactions: [],
-    },
-    {
-      ...base,
-      id: 'k-4',
-      name: 'Juniorka – hráč U20 (ukázka)',
-      kind: 'hrac',
-      instagram: '@ukazka_hrac',
-      followers: 2400,
-      clubIds: ['pce'],
-      stage: 'spoluprace',
-      nextAction: 'Repost jeho fotky s náramkem',
-      nextDate: addDays(t, 3),
-      tags: ['ambasador'],
-      notes: 'Nosí PCE na trénincích, svolil s fotkami.',
-      interactions: [{ id: 'i1', date: addDays(t, -14), type: 'naramek', text: 'Předán náramek PCE + 2 pro spoluhráče.' }],
     },
   ];
 }
@@ -233,7 +151,7 @@ export function createSeedData(opts: { empty?: boolean } = {}): AppData {
     bracelets: seedBracelets(),
     content: opts.empty ? [] : seedContent(),
     keyDates: seedKeyDates(),
-    contacts: opts.empty ? [] : seedContacts(),
+    contacts: [],
     settings: { ...DEFAULT_SETTINGS },
     trendIdeas: [],
     trendBrief: null,

@@ -1,5 +1,7 @@
 import type { Plugin, Connect } from 'vite';
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import fs from 'node:fs';
+import path from 'node:path';
 import type { Club } from '../src/types';
 import type { IntegrationStatus, ShopifySummary } from '../src/lib/integrations';
 import { parseGoogleTrendsRss, summarizeOrders } from '../src/lib/shopifyStats';
@@ -7,12 +9,42 @@ import { fetchOrders, fetchOrdersCount, fetchProducts, fetchRepeatCustomers, sho
 import { findTrendIdeas, AiError, type TrendRequest } from './ai';
 import { editImage, GeminiError } from './gemini';
 
+/** Soubor s klíči zadanými v Nastavení → Propojení (verze přes `npm run dev` / `npm start`). Necommituje se (*.local). */
+const KEYS_FILE = path.join(process.cwd(), 'klice.local');
+
+function loadKeysFile(): Partial<Record<KeyName, string>> {
+  try {
+    const data = JSON.parse(fs.readFileSync(KEYS_FILE, 'utf8')) as Record<string, unknown>;
+    return Object.fromEntries(KEY_NAMES.filter((k) => typeof data[k] === 'string' && data[k]).map((k) => [k, data[k] as string]));
+  } catch {
+    return {};
+  }
+}
+
 /**
  * Lokální API pro Offsidestore Studio – běží uvnitř `npm run dev` / `npm start`.
- * Klíče čte jen ze serverového prostředí (.env), do prohlížeče se nikdy nedostanou.
+ * Klíče čte jen na serveru (.env nebo klice.local z Nastavení), do prohlížeče se nikdy nedostanou.
  */
 export function offsideApi(env: Record<string, string | undefined>): Plugin {
-  const handler = createHandler(env);
+  // Klíče z Nastavení mají přednost před .env
+  Object.assign(env, loadKeysFile());
+  const handler = createHandler(env, {
+    storage: 'file',
+    saveKeys: (values) => {
+      const stored = loadKeysFile();
+      for (const k of KEY_NAMES) {
+        if (values[k] === undefined) continue;
+        if (values[k]) {
+          env[k] = values[k];
+          stored[k] = values[k];
+        } else {
+          delete env[k];
+          delete stored[k];
+        }
+      }
+      fs.writeFileSync(KEYS_FILE, JSON.stringify(stored, null, 2), { mode: 0o600 });
+    },
+  });
   return {
     name: 'offside-api',
     configureServer(server) {
@@ -61,8 +93,10 @@ export function maskKey(name: KeyName, v: string | undefined): string {
 }
 
 export interface HandlerOptions {
-  /** Desktop: uloží klíče (šifrovaně) a zapíše je do env. Bez něj se klíče mění jen v .env. */
+  /** Uloží klíče z Nastavení a zapíše je do env. Bez něj se klíče mění jen v .env. */
   saveKeys?: (values: Partial<Record<KeyName, string>>) => void;
+  /** Kam se klíče ukládají: desktop šifrovaně v profilu, vývojová verze do souboru klice.local. */
+  storage?: 'encrypted' | 'file';
 }
 
 /** env se čte při každém požadavku, takže změna klíčů v aplikaci platí hned. */
@@ -102,12 +136,13 @@ export function createHandler(env: Record<string, string | undefined>, options: 
       if (url.pathname === '/api/keys' && req.method === 'GET') {
         return send(res, 200, {
           editable: !!options.saveKeys,
+          storage: options.storage ?? 'encrypted',
           keys: Object.fromEntries(KEY_NAMES.map((k) => [k, maskKey(k, env[k])])),
         });
       }
 
       if (url.pathname === '/api/keys' && req.method === 'POST') {
-        if (!options.saveKeys) return send(res, 400, { error: 'Ve vývojové verzi se klíče nastavují v souboru .env.' });
+        if (!options.saveKeys) return send(res, 400, { error: 'Klíče tady nejde uložit – doplň je do souboru .env.' });
         const body = await readJson<Partial<Record<string, unknown>>>(req);
         const values: Partial<Record<KeyName, string>> = {};
         for (const k of KEY_NAMES) {
@@ -119,7 +154,7 @@ export function createHandler(env: Record<string, string | undefined>, options: 
       }
 
       if (url.pathname === '/api/shopify/summary' && req.method === 'POST') {
-        if (!shopifyMode(shop)) return send(res, 400, { error: 'Shopify není nastavený – doplň SHOPIFY_STORE a přístupové údaje do .env.' });
+        if (!shopifyMode(shop)) return send(res, 400, { error: 'Shopify není propojený – doplň údaje v Nastavení → Propojení.' });
         const body = await readJson<{ days?: number; clubs: Club[] }>(req);
         const days = Math.min(60, Math.max(7, Number(body.days) || 30));
         const [orders, products, total, repeat] = await Promise.all([
@@ -152,14 +187,14 @@ export function createHandler(env: Record<string, string | undefined>, options: 
       }
 
       if (url.pathname === '/api/ai/trends' && req.method === 'POST') {
-        if (!env.ANTHROPIC_API_KEY) return send(res, 400, { error: 'Chybí ANTHROPIC_API_KEY v souboru .env.' });
+        if (!env.ANTHROPIC_API_KEY) return send(res, 400, { error: 'Chybí Claude API klíč – vlož ho v Nastavení → Propojení.' });
         const body = await readJson<TrendRequest>(req);
         const result = await findTrendIdeas(env.ANTHROPIC_API_KEY, claudeModel, body);
         return send(res, 200, result);
       }
 
       if (url.pathname === '/api/ai/image' && req.method === 'POST') {
-        if (!env.GEMINI_API_KEY) return send(res, 400, { error: 'Chybí GEMINI_API_KEY v souboru .env.' });
+        if (!env.GEMINI_API_KEY) return send(res, 400, { error: 'Chybí Gemini API klíč – vlož ho v Nastavení → Propojení.' });
         const body = await readJson<{ prompt: string; image: string }>(req, 15_000_000);
         const m = /^data:(image\/(?:png|jpeg|webp));base64,(.+)$/.exec(body.image ?? '');
         if (!m || !body.prompt?.trim()) return send(res, 400, { error: 'Chybí fotka (PNG/JPG/WebP) nebo instrukce.' });
