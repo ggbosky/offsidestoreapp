@@ -13,7 +13,7 @@
 <header>
   <div class="brand"><svg viewBox="0 0 74 92" width="20" height="25"><circle cx="10" cy="58" r="10" fill="#fff"/><rect x="30" y="0" width="14" height="92" rx="3" fill="#fff"/><circle cx="64" cy="20" r="10" fill="#E30613"/></svg>
     <b>OFFSIDE</b> STUDIO</div>
-  <nav><button data-tab="projekty" class="on">Projekty</button><button data-tab="katalog">Katalog</button></nav>
+  <nav><button data-tab="projekty" class="on">Projekty</button><button data-tab="katalog">Katalog</button><button data-tab="nastaveni" id="tabSettings" hidden>Nastavení</button></nav>
 </header>
 
 <main id="projekty">
@@ -87,6 +87,34 @@
     </div>
   </div>
   <div id="catGrid"></div>
+</main>
+
+<main id="nastaveni" hidden>
+  <div class="setBox">
+    <h2>Nastavení</h2>
+    <h3>Realistický hlas (Gemini)</h3>
+    <p class="muted" id="keyState"></p>
+    <label>API klíč <span class="muted small">(zdarma na <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a>)</span>
+      <div class="keyRow"><input id="keyInput" type="password" autocomplete="off" spellcheck="false" placeholder="AIza…"><button id="keyShow" class="pill small ghost" type="button">Zobrazit</button></div>
+    </label>
+    <label>Hlas
+      <select id="voiceName">
+        <option value="Puck">Puck — mužský, energický (jako Project Two)</option>
+        <option value="Charon">Charon — mužský, klidný</option>
+        <option value="Fenrir">Fenrir — mužský, výrazný</option>
+        <option value="Orus">Orus — mužský, pevný</option>
+        <option value="Kore">Kore — ženský, pevný</option>
+        <option value="Aoede">Aoede — ženský, svěží</option>
+        <option value="Leda">Leda — ženský, mladý</option>
+      </select>
+    </label>
+    <div class="row">
+      <button id="keySave" class="pill red small">Uložit</button>
+      <button id="keyTest" class="pill small">Vyzkoušet klíč</button>
+      <button id="keyDel" class="pill small ghost">Odebrat klíč</button>
+    </div>
+    <p class="muted small">Klíč se ukládá jen v tomhle prohlížeči a posílá se jen přímo Googlu. Na jiném počítači nebo prohlížeči ho zadej znovu.</p>
+  </div>
 </main>
 
 <dialog id="picker">

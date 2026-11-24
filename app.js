@@ -22,7 +22,8 @@ const TYPE = { hook: "Háček", product: "Produkt", fact: "Fakt", quiz: "Kvíz",
 /* tabs */
 document.querySelectorAll("nav button").forEach((b) => b.onclick = () => {
   document.querySelectorAll("nav button").forEach((x) => x.classList.toggle("on", x === b));
-  $("#projekty").hidden = b.dataset.tab !== "projekty"; $("#katalog").hidden = b.dataset.tab !== "katalog";
+  for (const t of ["projekty", "katalog", "nastaveni"]) $("#" + t).hidden = b.dataset.tab !== t;
+  if (b.dataset.tab === "nastaveni") drawSettings();
   if (b.dataset.tab === "katalog") drawCatalog();
 });
 
@@ -238,3 +239,33 @@ const start = async () => {
 };
 // the stage iframe may finish loading before this module runs (always on the static build)
 if (frame.contentWindow?.ready) start(); else frame.addEventListener("load", start);
+
+/* settings (web only): Gemini key + voice live in this browser's localStorage */
+const LS = { get: (k) => { try { return localStorage.getItem(k) || ""; } catch { return ""; } },
+  set: (k, v) => { try { v ? localStorage.setItem(k, v) : localStorage.removeItem(k); } catch {} } };
+const KEYS = { key: "offside-gemini-key", voice: "offside-gemini-voice" };
+const mask = (k) => k.length > 10 ? k.slice(0, 4) + "…" + k.slice(-4) : "••••";
+function drawSettings() {
+  const k = LS.get(KEYS.key);
+  $("#keyState").innerHTML = k ? `Klíč je uložený: <b>${esc(mask(k))}</b>` : `Klíč zatím není nastavený — bez něj tlačítko „Realistický hlas (AI)“ nefunguje.`;
+  $("#keyInput").value = k; $("#keyInput").type = "password"; $("#keyShow").textContent = "Zobrazit";
+  $("#voiceName").value = LS.get(KEYS.voice) || "Puck";
+}
+if (WEB) {
+  $("#tabSettings").hidden = false;
+  $("#keyShow").onclick = () => { const i = $("#keyInput"), show = i.type === "password"; i.type = show ? "text" : "password"; $("#keyShow").textContent = show ? "Skrýt" : "Zobrazit"; };
+  $("#keySave").onclick = () => {
+    const k = $("#keyInput").value.trim();
+    LS.set(KEYS.key, k); LS.set(KEYS.voice, $("#voiceName").value);
+    drawSettings(); toast(k ? "Uloženo" : "Klíč odebrán");
+  };
+  $("#voiceName").onchange = () => { LS.set(KEYS.voice, $("#voiceName").value); toast("Hlas: " + $("#voiceName").value); };
+  $("#keyDel").onclick = () => { LS.set(KEYS.key, ""); drawSettings(); toast("Klíč odebrán"); };
+  $("#keyTest").onclick = () => busy($("#keyTest"), async () => {
+    const k = $("#keyInput").value.trim();
+    if (!k) throw new Error("Nejdřív vlož klíč");
+    const r = await fetch("https://generativelanguage.googleapis.com/v1beta/models?pageSize=1", { headers: { "x-goog-api-key": k } });
+    if (!r.ok) { const j = await r.json().catch(() => ({})); throw new Error("Klíč nefunguje: " + (j.error?.message || r.status)); }
+    toast("Klíč funguje ✓");
+  });
+}

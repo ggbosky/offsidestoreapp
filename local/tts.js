@@ -1,19 +1,16 @@
 // Realistic voice in the browser: Gemini TTS ("Puck", same as AI Studio / Project Two reels) called
-// straight from the page. The API key stays in this browser's localStorage only.
+// straight from the page. Key and voice are set in the Nastavení tab (this browser's localStorage only).
 // Each scene line is synthesized separately, silence trimmed, joined with short gaps → one WAV.
 const KEY = "offside-gemini-key";
 const SR = 24000, GAP = 0.3;
 
-function apiKey(reset) {
-  let k = null;
-  try { k = reset ? null : localStorage.getItem(KEY); } catch {}
-  if (!k) {
-    k = (prompt("Vlož Gemini API klíč (aistudio.google.com/apikey).\nUloží se jen v tomhle prohlížeči.") || "").trim();
-    if (!k) throw new Error("Bez API klíče to nejde");
-    try { localStorage.setItem(KEY, k); } catch {}
-  }
+function apiKey() {
+  let k = "";
+  try { k = localStorage.getItem(KEY) || ""; } catch {}
+  if (!k) throw new Error("Nejdřív vlož Gemini API klíč v záložce Nastavení");
   return k;
 }
+const voiceName = () => { try { return localStorage.getItem("offside-gemini-voice") || "Puck"; } catch { return "Puck"; } };
 
 async function line(text, key) {
   const r = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent", {
@@ -21,12 +18,12 @@ async function line(text, key) {
     headers: { "Content-Type": "application/json", "x-goog-api-key": key },
     body: JSON.stringify({
       contents: [{ parts: [{ text: `Řekni česky, přirozeně a s energií, jako mladý moderátor Instagram reelu: ${text}` }] }],
-      generationConfig: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Puck" } } } },
+      generationConfig: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voiceName() } } } },
     }),
   });
   const j = await r.json().catch(() => ({}));
-  if (r.status === 400 || r.status === 401 || r.status === 403) { try { localStorage.removeItem(KEY); } catch {} }
   const b64 = j.candidates?.[0]?.content?.parts?.find((p) => p.inlineData)?.inlineData?.data;
+  if (/API key|PERMISSION/i.test(j.error?.message || "")) throw new Error("Gemini klíč nefunguje — zkontroluj ho v Nastavení");
   if (!r.ok || !b64) throw new Error("Gemini: " + (j.error?.message || r.status));
   const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
   return new Int16Array(bytes.buffer, 0, bytes.length >> 1);
@@ -53,16 +50,13 @@ function wav(chunks) {
 
 // → { blob, words } with word timings from the exact per-scene durations
 export async function geminiVoice(spec) {
-  let key = apiKey(false);
+  const key = apiKey();
   const chunks = [], words = [];
   let t = 0;
   for (const s of spec.scenes) {
     const text = (s.say || "").trim();
     if (!text) continue;
-    let pcm;
-    try { pcm = await line(text, key); }
-    catch (e) { if (/API key|PERMISSION|40[013]/i.test(e.message)) { key = apiKey(true); pcm = await line(text, key); } else throw e; }
-    pcm = trim(pcm);
+    const pcm = trim(await line(text, key));
     const speech = pcm.length / SR, ws = text.split(/\s+/).filter(Boolean), total = ws.reduce((a, w) => a + w.length, 0) || 1;
     let u = t;
     for (const w of ws) { const k = speech * w.length / total; words.push([+u.toFixed(2), +(u + k).toFixed(2), w]); u += k; }
