@@ -298,7 +298,6 @@ const SLIDES = {
     const el = h(`<div class="fill">${dark()}
       ${it ? `<div class="photo" style="bottom:640px;background-image:url('${it.image}')"></div><div class="abs" style="left:0;right:0;top:420px;height:300px;background:linear-gradient(180deg,transparent,#000)"></div>` : ""}
       <div class="abs txt" style="left:70px;right:70px;top:${it ? 690 : 380}px">
-        ${s.num ? `<div class="chip" style="font-size:52px;padding:14px 34px;margin-bottom:30px">${s.num}</div>` : ""}
         <div class="it hl" style="font-size:96px">${accent(s.text)}</div>
         <div style="font:600 46px/1.32 Montserrat;margin-top:28px;opacity:.92">${esc(s.sub || "")}</div></div></div>`);
     return { el, after() { fit(el.querySelector(".hl"), 940, 300, 96); } };
@@ -322,13 +321,13 @@ const SLIDES = {
     const its = (s.items || []).map(item);
     const m = String(s.text).match(/^(.*?)\*(.+?)\*(.*)$/) || [0, s.text, "", ""];
     const el = h(`<div class="fill">${dark()}
-      <div class="abs it l1" style="left:60px;top:120px;text-align:center">${esc(m[1].trim())}</div>
+      <div class="abs it l1" style="left:60px;top:190px;text-align:center">${esc(m[1].trim())}</div>
       <div class="abs it red l2" style="left:60px;top:300px;text-align:center">${esc((m[2] + m[3]).trim())}</div>
-      <div class="abs" style="left:0;right:0;top:470px;text-align:center"><span class="it" style="display:inline-block;background:#fff;color:#000;font-size:54px;padding:16px 34px;transform:rotate(-2deg)">${esc(s.sub || "")}</span></div>
-      ${its.map((it, i) => `<div class="abs" style="left:${60 + i * 327}px;top:610px;width:305px;height:290px;border-radius:24px;overflow:hidden;background:url('${it.image}') center/cover"></div>`).join("")}
+      <div class="abs" style="left:0;right:0;top:530px;text-align:center"><span class="it" style="display:inline-block;background:#fff;color:#000;font-size:54px;padding:16px 34px;transform:rotate(-2deg)">${esc(s.sub || "")}</span></div>
+      ${its.map((it, i) => `<div class="abs" style="left:${60 + i * 327}px;top:670px;width:305px;height:290px;border-radius:24px;overflow:hidden;background:url('${it.image}') center/cover"></div>`).join("")}
       <div class="abs" style="left:60px;top:1200px"><div class="shop" style="font-size:54px;padding:18px 34px">${CART.replace(/64/g, "52")}<span>OFFSIDESTORE<b>.CZ</b></span></div></div></div>`);
     return { el, extra: () => mascotAt(770, 1010, 290, s.bubble, { t: 0.3 }),
-      after() { const a = el.querySelector(".l1"), b = el.querySelector(".l2"); fit(a, 960, 175, 190); fit(b, 960, 140, 130); b.style.top = (130 + a.offsetHeight + 10) + "px"; } };
+      after() { const a = el.querySelector(".l1"), b = el.querySelector(".l2"); fit(a, 960, 175, 190); fit(b, 960, 140, 130); b.style.top = (200 + a.offsetHeight + 10) + "px"; } };
   },
   comment(s) {
     const its = (s.items || []).map(item);
@@ -354,8 +353,6 @@ window.showSlide = async (i) => {
   stage.insertAdjacentHTML("beforeend", LOGO);
   if (C.spec.mascot?.on && sl.extra) sl.extra().forEach((n) => stage.appendChild(n));
   sl.after?.();
-  // page counter like a swipe hint
-  stage.appendChild(h(`<div class="abs" style="right:54px;top:70px;font:800 30px Montserrat;opacity:.75;background:rgba(0,0,0,.45);padding:10px 20px;border-radius:999px">${i + 1}/${C.spec.slides.length}</div>`));
   await window.preload();
   return true;
 };
