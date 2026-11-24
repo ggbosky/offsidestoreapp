@@ -10,7 +10,7 @@ const FPS = 30, SR = 48000;
 async function openStage(height) {
   const f = document.createElement("iframe");
   Object.assign(f.style, { position: "fixed", left: "-20000px", top: "0", width: "1080px", height: height + "px", border: "0" });
-  f.src = "stage.html?v=1795549809384";
+  f.src = "stage.html?v=1795549930285";
   document.body.appendChild(f);
   await new Promise((ok) => f.addEventListener("load", ok, { once: true }));
   const w = f.contentWindow;

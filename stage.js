@@ -296,8 +296,8 @@ const SLIDES = {
   fact(s) {
     const it = s.item ? item(s.item) : null;
     const el = h(`<div class="fill">${dark()}
-      ${it ? `<div class="photo" style="bottom:640px;background-image:url('${it.image}')"></div><div class="abs" style="left:0;right:0;top:420px;height:300px;background:linear-gradient(180deg,transparent,#000)"></div>` : ""}
-      <div class="abs txt" style="left:70px;right:70px;top:${it ? 690 : 380}px">
+      ${it ? `<div class="photo" style="bottom:120px;background-image:url('${it.image}')"></div><div class="abs" style="left:0;right:0;top:700px;height:530px;background:linear-gradient(180deg,transparent 0%,rgba(0,0,0,.55) 40%,rgba(0,0,0,.92) 75%,#000 100%)"></div>` : ""}
+      <div class="abs txt" style="left:70px;right:70px;${it ? "bottom:100px;text-shadow:0 4px 24px rgba(0,0,0,.6)" : "top:380px"}">
         <div class="it hl" style="font-size:96px">${accent(s.text)}</div>
         <div style="font:600 46px/1.32 Montserrat;margin-top:28px;opacity:.92">${esc(s.sub || "")}</div></div></div>`);
     return { el, after() { fit(el.querySelector(".hl"), 940, 300, 96); } };
