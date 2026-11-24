@@ -62,6 +62,9 @@ export const PostPreview = forwardRef<SVGSVGElement, Props>(function PostPreview
             <stop offset="0" stopColor="#1D1D22" />
             <stop offset="1" stopColor="#050505" />
           </linearGradient>
+          <filter id="mm-logo-shadow" x="-50%" y="-50%" width="200%" height="200%">
+            <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#000" floodOpacity="0.6" />
+          </filter>
           <linearGradient id="mm-shade" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0" stopColor="#000" stopOpacity="0.45" />
             <stop offset="0.3" stopColor="#000" stopOpacity="0" />
@@ -80,17 +83,15 @@ export const PostPreview = forwardRef<SVGSVGElement, Props>(function PostPreview
           </>
         )}
         <rect width={W} height={H} fill="url(#mm-shade)" />
-        {meme.top && <MemeText text={meme.top} x={W / 2} y={vertical ? 260 : 150} size={size} maxChars={vertical ? 16 : 19} />}
-        {meme.bottom && <MemeText text={meme.bottom} x={W / 2} y={H - (vertical ? 300 : 130)} anchorBottom size={size} maxChars={vertical ? 16 : 19} />}
-        <g transform={`translate(${W - 250} ${H - 62})`} opacity="0.9">
-          <g transform="scale(0.035)">
+        {meme.top && <MemeText text={meme.top} x={W / 2} y={vertical ? 290 : 200} size={size} maxChars={vertical ? 16 : 18} />}
+        {meme.bottom && <MemeText text={meme.bottom} x={W / 2} y={H - (vertical ? 300 : 110)} anchorBottom size={size} maxChars={vertical ? 16 : 18} />}
+        {/* logo vlevo nahoře */}
+        <g transform="translate(48 44)" filter="url(#mm-logo-shadow)">
+          <g transform="scale(0.1)">
             <rect x="293" y="0" width="115" height="1001" fill="#fff" />
             <circle cx="125" cy="625" r="125" fill="#fff" />
             <circle cx="575" cy="375" r="125" fill="#EC0016" />
           </g>
-          <text x={34} y={28} fontFamily={FONT} fontWeight={800} fontSize={22} letterSpacing={2} fill="#fff" stroke="#000" strokeWidth={4} paintOrder="stroke">
-            OFFSIDESTORE.CZ
-          </text>
         </g>
       </svg>
     );
