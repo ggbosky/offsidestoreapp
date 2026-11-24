@@ -23,7 +23,7 @@ export const BRAND = {
  * takže nové sestavení by se kontrolovalo znovu. Po vydání nové verze stačí změnit tag zde.
  */
 export const DOWNLOAD = {
-  releaseTag: 'studio-5',
+  releaseTag: 'studio-6',
   repo: 'ggbosky/offsidestoreapp',
   get installer() {
     return `https://github.com/${this.repo}/releases/download/${this.releaseTag}/Offsidestore-Studio-Instalace.exe`;
