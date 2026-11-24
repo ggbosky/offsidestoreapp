@@ -253,6 +253,8 @@ function drawSettings() {
 }
 if (WEB) {
   $("#tabSettings").hidden = false;
+  $("#voiceHint").innerHTML = `Realistický hlas namluví Gemini (výchozí Puck, jako v Project Two). Klíč a hlas nastavíš v <button class="voiceSet" id="goSettings">⚙ Nastavení</button>. Nebo nahraj vlastní nahrávku přes „Nahrát hlas…“.`;
+  $("#goSettings").onclick = () => $("#tabSettings").click();
   $("#keyShow").onclick = () => { const i = $("#keyInput"), show = i.type === "password"; i.type = show ? "text" : "password"; $("#keyShow").textContent = show ? "Skrýt" : "Zobrazit"; };
   $("#keySave").onclick = () => {
     const k = $("#keyInput").value.trim();

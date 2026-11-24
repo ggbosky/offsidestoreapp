@@ -1,6 +1,6 @@
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
-body { margin: 0; background: #0d0d0f; color: #eee; font: 500 14px/1.45 Montserrat, system-ui, sans-serif; height: 100vh; display: flex; flex-direction: column; }
+body { margin: 0; overflow: hidden; background: #0d0d0f; color: #eee; font: 500 14px/1.45 Montserrat, system-ui, sans-serif; height: 100vh; display: flex; flex-direction: column; }
 header { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; border-bottom: 1px solid #222; }
 .brand { display: flex; align-items: center; gap: 10px; letter-spacing: .12em; font-weight: 800; }
 .brand b { font: 900 italic 18px Montserrat; letter-spacing: 0; }
@@ -27,7 +27,7 @@ aside { width: 250px; border-right: 1px solid #222; padding: 16px; overflow: aut
 .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 8px 0; }
 .muted { color: #888; } .small { font-size: 12px; }
 
-#preview { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 16px; min-width: 380px; }
+#preview { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 16px; min-width: 0; }
 #empty { color: #777; }
 #frameWrap { width: 360px; height: 640px; overflow: hidden; border-radius: 18px; background: #000; box-shadow: 0 20px 60px rgba(0,0,0,.6); position: relative; }
 #frameWrap.slide { height: 450px; }
@@ -39,7 +39,7 @@ aside { width: 250px; border-right: 1px solid #222; padding: 16px; overflow: aut
 #slideNav button { width: 34px; height: 34px; border-radius: 50%; border: 1px solid #333; background: #1b1b1e; color: #fff; font-weight: 800; cursor: pointer; }
 #slideNav button.on { background: #E30613; border-color: #E30613; }
 
-#editor { width: 470px; border-left: 1px solid #222; padding: 16px 18px 40px; overflow: auto; flex: none; }
+#editor { width: min(470px, 42vw); min-width: 320px; border-left: 1px solid #222; padding: 16px 18px 40px; overflow: auto; flex: none; }
 .title { width: 100%; background: none; border: 0; color: #fff; font: 900 italic 22px Montserrat; text-transform: uppercase; padding: 4px 0; }
 details { border-top: 1px solid #222; padding: 10px 0; }
 summary { font-weight: 800; cursor: pointer; letter-spacing: .06em; text-transform: uppercase; font-size: 12px; color: #bbb; margin-bottom: 8px; }
@@ -96,3 +96,7 @@ dialog h3 { font: 900 italic 22px Montserrat; text-transform: uppercase; margin:
 .setBox a { color: #ff4d57; }
 .keyRow { display: flex; gap: 8px; align-items: center; }
 .keyRow input { flex: 1; min-width: 0; }
+
+header { position: relative; z-index: 2; gap: 12px; }
+nav { display: flex; flex-wrap: wrap; justify-content: flex-end; flex: none; }
+.voiceSet { color: #ff4d57; cursor: pointer; text-decoration: underline; background: none; border: 0; font: inherit; padding: 0; }
