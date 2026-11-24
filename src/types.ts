@@ -122,6 +122,8 @@ export interface Settings {
   autoTrends: 'off' | 'daily';
   /** Výchozí zaměření hledání trendů */
   trendFocus: string;
+  /** Ukázková data byla jednou odstraněna (při aktualizaci z verze s ukázkami). */
+  demoPurged: boolean;
 }
 
 export interface TrendBrief {

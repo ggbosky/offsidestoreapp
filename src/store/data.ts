@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import type { AppData, Bracelet, Club, Contact, ContentItem, ContentStage, CrmStage, Interaction, KeyDate, Settings, TrendBrief } from '../types';
 import type { ShopifySummary, TrendIdea } from '../lib/integrations';
-import { createSeedData } from '../data/seed';
+import { createSeedData, purgeDemo } from '../data/seed';
 import { uid } from '../lib/id';
 import { today } from '../lib/dates';
 
@@ -160,7 +160,7 @@ export const useData = create<DataStore>()(
       replaceAll: (data) => set({ ...data }),
       resetDemo: () => {
         const keep = get().settings;
-        const seed = createSeedData();
+        const seed = createSeedData({ demo: true });
         set({ ...seed, settings: { ...seed.settings, passwordHash: keep.passwordHash, autoLockMinutes: keep.autoLockMinutes } });
       },
       markBackup: () => set((s) => ({ settings: { ...s.settings, lastBackupAt: now() } })),
@@ -172,8 +172,16 @@ export const useData = create<DataStore>()(
       partialize: (s) => pickData(s),
       // starší uložená data doplní o nové sekce a nastavení
       merge: (persisted, current) => {
-        const p = (persisted ?? {}) as Partial<AppData>;
-        return { ...current, ...p, settings: { ...current.settings, ...(p.settings ?? {}) } };
+        let p = (persisted ?? {}) as Partial<AppData>;
+        // Starší verze začínala s ukázkovými kontakty a obsahem – jednorázově je odstraníme.
+        if (p.settings && !('demoPurged' in p.settings)) {
+          p = { ...p, ...purgeDemo({ content: p.content ?? [], contacts: p.contacts ?? [], bracelets: p.bracelets ?? current.bracelets }) };
+        }
+        return { ...current, ...p, settings: { ...current.settings, ...(p.settings ?? {}), demoPurged: true } };
+      },
+      // po načtení hned uložit (aby se případné smazání ukázek propsalo do úložiště)
+      onRehydrateStorage: () => (state) => {
+        if (state) queueMicrotask(() => state.updateSettings({}));
       },
     },
   ),

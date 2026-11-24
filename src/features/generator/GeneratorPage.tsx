@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
-import { BookmarkPlus, Copy, Download, Hash, Lightbulb, RefreshCw, Video } from 'lucide-react';
+import { BookmarkPlus, Copy, Download, Hash, ImagePlus, Lightbulb, RefreshCw, Type, Video, X } from 'lucide-react';
+import { resizeImage } from '../../lib/image';
 import type { Platform } from '../../types';
 import { useData, newContent } from '../../store/data';
 import { useUi } from '../../store/ui';
@@ -12,10 +13,10 @@ import { PLATFORMS } from '../../lib/meta';
 import { uid } from '../../lib/id';
 import { copyText } from '../../lib/clipboard';
 import { toast } from '../../store/toast';
-import { TONE_LABEL, generateIdeas, type SocialTone } from './generator';
+import { TONE_LABEL, generateIdeas, type MemeIdea, type SocialTone } from './generator';
 import { PostPreview, downloadSvgAsPng } from './PostPreview';
 
-const TONE_PILLAR = { hype: 'zapas', fan: 'fanousci', product: 'produkt', behind: 'vyroba' } as const;
+const TONE_PILLAR = { meme: 'fanousci', hype: 'zapas', fan: 'fanousci', product: 'produkt', behind: 'vyroba' } as const;
 
 export function GeneratorPage() {
   const { clubs, settings } = useData();
@@ -25,9 +26,12 @@ export function GeneratorPage() {
   const [text, setText] = useState(club?.abbr ?? 'LIT');
   const [color, setColor] = useState(club?.laceColor ?? '#B01E28');
   const [platform, setPlatform] = useState<Platform>('ig-post');
-  const [tone, setTone] = useState<SocialTone>('hype');
+  const [tone, setTone] = useState<SocialTone>('meme');
   const [seed, setSeed] = useState(() => Math.floor(Math.random() * 1e9));
+  const [meme, setMeme] = useState<{ top: string; bottom: string } | null>(null);
+  const [photo, setPhoto] = useState<string | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
+  const photoRef = useRef<HTMLInputElement>(null);
 
   const ideas = useMemo(
     () =>
@@ -47,19 +51,27 @@ export function GeneratorPage() {
     [club, text, color, platform, tone, seed, settings.basePrice],
   );
 
-  function saveIdea(caption: string) {
+  function saveIdea(caption: string, m?: MemeIdea) {
     openContent(
       newContent({
-        title: `${club?.short ?? text} – ${TONE_LABEL[tone].toLowerCase()}`,
+        title: m ? `Meme: ${m.top}` : `${club?.short ?? text} – ${TONE_LABEL[tone].toLowerCase()}`,
         platforms: [platform],
         pillar: TONE_PILLAR[tone],
-        hook: ideas.hooks[0],
+        hook: m ? m.top : ideas.hooks[0],
         caption,
         hashtags: ideas.hashtags,
-        shots: ideas.visual.map((v) => ({ id: uid('s'), text: v, done: false })),
+        shots: m
+          ? [
+              { id: uid('s'), text: `Text na obrázku nahoře: ${m.top}`, done: false },
+              { id: uid('s'), text: `Text na obrázku dole: ${m.bottom}`, done: false },
+              { id: uid('s'), text: 'Fotka: náramek v situaci z memu (vlastní fotka, žádná cizí loga ani tváře)', done: false },
+            ]
+          : ideas.visual.map((v) => ({ id: uid('s'), text: v, done: false })),
       }),
     );
   }
+
+  const memeActive = tone === 'meme' ? meme ?? (ideas.memes[0] ? { top: ideas.memes[0].top, bottom: ideas.memes[0].bottom } : null) : null;
 
   return (
     <div className="grid gap-6 xl:grid-cols-[1.25fr_1fr]">
@@ -120,12 +132,42 @@ export function GeneratorPage() {
               </button>
             ))}
           </div>
-          <button className="btn-ghost" onClick={() => setSeed((s) => s + 7919)}>
+          <button className="btn-ghost" onClick={() => {
+              setSeed((s) => s + 7919);
+              setMeme(null);
+            }}>
             <RefreshCw size={15} /> Jiné varianty
           </button>
         </section>
 
-        <section className="space-y-3">
+        {tone === 'meme' && (
+          <section className="space-y-3">
+            {ideas.memes.map((m, i) => (
+              <div key={`${seed}-m-${i}`} className={`card p-5 ${memeActive?.top === m.top ? 'border-brand/60' : ''}`}>
+                <div className="rounded-xl bg-bg/70 p-4 text-center font-extrabold uppercase leading-tight">
+                  <p className="text-lg">{m.top}</p>
+                  <p className="my-1 text-xs text-faint">· · ·</p>
+                  <p className="text-lg">{m.bottom}</p>
+                </div>
+                <p className="mt-3 leading-relaxed">{m.caption}</p>
+                <p className="mt-1 text-sm text-sky">{ideas.hashtags}</p>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <button className="btn-primary px-3 py-1.5 text-xs" onClick={() => setMeme({ top: m.top, bottom: m.bottom })}>
+                    <Type size={13} /> Dát na obrázek
+                  </button>
+                  <button className="btn-ghost px-3 py-1.5 text-xs" onClick={() => copyText(`${m.caption}\n\n${ideas.hashtags}`)}>
+                    <Copy size={13} /> Kopírovat popisek
+                  </button>
+                  <button className="btn-ghost px-3 py-1.5 text-xs" onClick={() => saveIdea(m.caption, m)}>
+                    <BookmarkPlus size={13} /> Uložit do plánu
+                  </button>
+                </div>
+              </div>
+            ))}
+          </section>
+        )}
+
+        <section className={`space-y-3 ${tone === 'meme' ? 'hidden' : ''}`}>
           {ideas.captions.map((c, i) => (
             <div key={`${seed}-${i}`} className="card p-5">
               <p className="whitespace-pre-line leading-relaxed">{c}</p>
@@ -188,8 +230,44 @@ export function GeneratorPage() {
             <span className="font-bold">Vizuál</span>
             <span className="text-xs text-faint">{platform === 'ig-post' ? '1080 × 1350 (4:5)' : '1080 × 1920 (9:16)'}</span>
           </div>
+          {memeActive && (
+            <div className="mb-4 space-y-2">
+              <input id="meme-top" className="input py-2 font-bold" value={memeActive.top} onChange={(e) => setMeme({ ...memeActive, top: e.target.value })} placeholder="Text nahoře" aria-label="Text nahoře" />
+              <input id="meme-bottom" className="input py-2 font-bold" value={memeActive.bottom} onChange={(e) => setMeme({ ...memeActive, bottom: e.target.value })} placeholder="Text dole" aria-label="Text dole" />
+              <div className="flex gap-2">
+                <button className="btn-ghost flex-1 py-2 text-xs" onClick={() => photoRef.current?.click()}>
+                  <ImagePlus size={14} /> {photo ? 'Jiná fotka' : 'Vlastní fotka na pozadí'}
+                </button>
+                {photo && (
+                  <button className="btn-ghost px-3 py-2" onClick={() => setPhoto(null)} aria-label="Odebrat fotku">
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+              <input
+                ref={photoRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={async (e) => {
+                  const f = e.target.files?.[0];
+                  e.target.value = '';
+                  if (f) setPhoto(await resizeImage(f, 1600, 0.9));
+                }}
+              />
+            </div>
+          )}
           <div className={`mx-auto ${platform === 'ig-post' ? 'max-w-sm' : 'max-w-[290px]'}`}>
-            <PostPreview ref={svgRef} vertical={platform !== 'ig-post'} color={color} text={text || ' '} title={club?.short ?? 'Tvůj klub'} subtitle={club?.name ?? 'Vlastní nápis'} />
+            <PostPreview
+              ref={svgRef}
+              vertical={platform !== 'ig-post'}
+              color={color}
+              text={text || ' '}
+              title={club?.short ?? 'Tvůj klub'}
+              subtitle={club?.name ?? 'Vlastní nápis'}
+              meme={memeActive}
+              photo={photo}
+            />
           </div>
           <button
             className="btn-ghost mt-4 w-full"
@@ -202,7 +280,11 @@ export function GeneratorPage() {
           >
             <Download size={15} /> Stáhnout PNG
           </button>
-          <p className="mt-2 text-xs text-faint">Šablona/podklad. Nejlíp fungují skutečné fotky – třeba na červeném zábradlí jako na webu.</p>
+          <p className="mt-2 text-xs text-faint">
+            {tone === 'meme'
+              ? 'Tip: vlastní fotka náramku v situaci z memu (tribuna, pod rukávem, u stromečku) funguje líp než grafika.'
+              : 'Šablona/podklad. Nejlíp fungují skutečné fotky – třeba na červeném zábradlí jako na webu.'}
+          </p>
         </div>
       </aside>
     </div>

@@ -263,6 +263,16 @@ function IdeaCard({ i, onPlan, onStudio, onStatus }: { i: TrendIdea; onPlan: () 
         <p className="text-[15px] leading-relaxed">{i.concept}</p>
       </div>
 
+      {i.imageText && (
+        <div className="mt-3 rounded-xl bg-black p-4 text-center font-extrabold uppercase leading-tight text-white">
+          {i.imageText.split('/').map((t, k) => (
+            <p key={k} className={k ? 'mt-2' : ''}>
+              {t.trim()}
+            </p>
+          ))}
+        </div>
+      )}
+
       <div className="mt-3 space-y-2">
         <p className="text-lg font-extrabold">„{i.hook}“</p>
         <div className="group relative rounded-xl bg-surface-2 p-3 pr-10 text-sm leading-relaxed">

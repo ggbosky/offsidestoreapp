@@ -10,7 +10,7 @@ import { fetchOrders, shopDomain } from '../../server/shopify';
 import { ideaToContent, isExpired } from '../features/trends/ideaToContent';
 import type { ShopifyOrder, ShopifySummary, TrendIdea } from './integrations';
 
-const clubs = createSeedData().clubs;
+const clubs = createSeedData({ demo: true }).clubs;
 const li = (title: string, quantity = 1, attributes: Array<{ key: string; value: string }> = [], handle: string | null = null) => ({ title, quantity, sku: null, variantTitle: null, productHandle: handle, attributes });
 
 describe('Shopify statistiky', () => {
@@ -55,7 +55,7 @@ describe('Shopify statistiky', () => {
 
 describe('Shopify synchronizace', () => {
   it('produkty doplní fotky ke klubovým náramkům', () => {
-    const d = createSeedData();
+    const d = createSeedData({ demo: true });
     const r = syncBraceletsFromProducts(
       [
         { title: 'Náramek HC SPARTA PRAHA – SPA', handle: 'naramek-hc-sparta-praha-spa', status: 'ACTIVE', imageUrl: 'https://cdn.shopify.com/spa.jpg', url: null },
@@ -68,7 +68,7 @@ describe('Shopify synchronizace', () => {
     expect(r.bracelets.find((b) => b.id === 'b-spa')?.photo).toBe('https://cdn.shopify.com/spa.jpg');
   });
   it('stálí zákazníci bez duplicit', () => {
-    const d = createSeedData();
+    const d = createSeedData({ demo: true });
     const out = importRepeatCustomers(
       [
         { name: 'Info', email: 'info@example.cz', city: null, orders: 2 },

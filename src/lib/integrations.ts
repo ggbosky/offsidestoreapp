@@ -90,6 +90,8 @@ export interface TrendIdea {
   sources: Array<{ title: string; url: string }>;
   format: TrendFormat;
   concept: string;
+  /** Text na obrázek (meme) – „NAHOŘE / DOLE“ */
+  imageText?: string;
   hook: string;
   caption: string;
   hashtags: string;

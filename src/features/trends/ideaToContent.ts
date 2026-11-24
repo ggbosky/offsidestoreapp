@@ -27,6 +27,7 @@ export function ideaToContent(i: TrendIdea, braceletIds: string[]): ContentItem 
     caption: i.caption,
     hashtags: i.hashtags,
     shots: [
+      ...(i.imageText ? [{ id: uid('s'), text: `Text na obrázku: ${i.imageText}`, done: false }] : []),
       { id: uid('s'), text: `Vizuál: ${i.concept}`, done: false },
       ...(i.imagePrompt ? [{ id: uid('s'), text: `Gemini úprava fotky: ${i.imagePrompt}`, done: false }] : []),
     ],

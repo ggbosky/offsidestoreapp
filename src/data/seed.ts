@@ -29,6 +29,7 @@ export const DEFAULT_SETTINGS: Settings = {
   maxChars: 12,
   autoTrends: 'off',
   trendFocus: '',
+  demoPurged: true,
 };
 
 const now = () => new Date().toISOString();
@@ -226,14 +227,41 @@ function seedKeyDates(): KeyDate[] {
   ];
 }
 
-export function createSeedData(opts: { empty?: boolean } = {}): AppData {
+/** ID ukázkových záznamů – při aktualizaci se z uložených dat odstraní (pokud je uživatel nepřidal sám přes „Ukázková data“). */
+export const DEMO_IDS = {
+  content: new Set(['c-1', 'c-2', 'c-3', 'c-4', 'c-5']),
+  contacts: new Set(['k-1', 'k-2', 'k-3', 'k-4']),
+  bracelets: new Set(['b-idea-derby', 'b-idea-xmas']),
+};
+
+/** Odstraní ukázkové kontakty, obsah a vymyšlené náramky (včetně odkazů na ně). */
+export function purgeDemo<T extends Pick<AppData, 'content' | 'contacts' | 'bracelets'>>(d: T): T {
+  const content = (d.content ?? [])
+    .filter((c) => !DEMO_IDS.content.has(c.id))
+    .map((c) => ({
+      ...c,
+      contactIds: c.contactIds.filter((id) => !DEMO_IDS.contacts.has(id)),
+      braceletIds: c.braceletIds.filter((id) => !DEMO_IDS.bracelets.has(id)),
+    }));
+  return {
+    ...d,
+    content,
+    contacts: (d.contacts ?? []).filter((k) => !DEMO_IDS.contacts.has(k.id)),
+    bracelets: (d.bracelets ?? []).filter((b) => !DEMO_IDS.bracelets.has(b.id)),
+  };
+}
+
+/** Výchozí data: kluby, jejich náramky a příležitosti. Ukázkový obsah a kontakty jen na vyžádání (demo: true). */
+export function createSeedData(opts: { demo?: boolean; empty?: boolean } = {}): AppData {
+  const demo = !!opts.demo && !opts.empty;
+  const bracelets = seedBracelets();
   return {
     schemaVersion: 2,
     clubs: DEFAULT_CLUBS.map((c) => ({ ...c })),
-    bracelets: seedBracelets(),
-    content: opts.empty ? [] : seedContent(),
+    bracelets: demo ? bracelets : bracelets.filter((b) => !DEMO_IDS.bracelets.has(b.id)),
+    content: demo ? seedContent() : [],
     keyDates: seedKeyDates(),
-    contacts: opts.empty ? [] : seedContacts(),
+    contacts: demo ? seedContacts() : [],
     settings: { ...DEFAULT_SETTINGS },
     trendIdeas: [],
     trendBrief: null,

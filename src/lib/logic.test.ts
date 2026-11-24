@@ -4,7 +4,7 @@ import { parseBackup, createBackup } from './backup';
 import { sha256Fallback, sha256Hex, verifyPassword } from './auth';
 import { addDays, diffDays, relative, startOfWeek } from './dates';
 import { attentionCount, dueFollowUps, overdueContent, upcomingContent } from './selectors';
-import { createSeedData, DEFAULT_SETTINGS } from '../data/seed';
+import { createSeedData, DEFAULT_SETTINGS, purgeDemo } from '../data/seed';
 import { DEFAULT_PASSWORD_HASH } from '../config';
 import { generateIdeas } from '../features/generator/generator';
 
@@ -18,12 +18,29 @@ describe('ceník (jen pro texty)', () => {
 });
 
 describe('data', () => {
-  it('12 klubů z webu se správnými zkratkami', () => {
+  it('nová aplikace začíná bez ukázkových kontaktů a obsahu', () => {
     const d = createSeedData();
+    expect(d.contacts).toEqual([]);
+    expect(d.content).toEqual([]);
+    expect(d.bracelets.map((b) => b.id)).not.toContain('b-idea-derby');
+    expect(d.bracelets).toHaveLength(12);
+  });
+  it('aktualizace smaže ukázky, ale vlastní záznamy nechá', () => {
+    const demo = createSeedData({ demo: true });
+    const mine = { ...demo.contacts[0], id: 'k-vlastni', name: 'Můj kontakt' };
+    const myPost = { ...demo.content[0], id: 'c-vlastni', contactIds: ['k-1', 'k-vlastni'], braceletIds: ['b-idea-derby', 'b-lit'] };
+    const out = purgeDemo({ contacts: [...demo.contacts, mine], content: [...demo.content, myPost], bracelets: demo.bracelets });
+    expect(out.contacts.map((k) => k.id)).toEqual(['k-vlastni']);
+    expect(out.content.map((c) => c.id)).toEqual(['c-vlastni']);
+    expect(out.content[0]).toMatchObject({ contactIds: ['k-vlastni'], braceletIds: ['b-lit'] });
+    expect(out.bracelets).toHaveLength(12);
+  });
+  it('12 klubů z webu se správnými zkratkami', () => {
+    const d = createSeedData({ demo: true });
     expect(d.clubs.map((c) => c.abbr)).toEqual(['LIT', 'SPA', 'PCE', 'JIH', 'VSE', 'ZLN', 'KOM', 'TRE', 'SLB', 'SLA', 'KLA', 'TRI']);
   });
   it('záloha: export → import', () => {
-    const d = createSeedData();
+    const d = createSeedData({ demo: true });
     const r = parseBackup(JSON.stringify(createBackup(d)));
     expect(r.content).toHaveLength(d.content.length);
     expect(r.contacts).toHaveLength(d.contacts.length);
@@ -42,7 +59,7 @@ describe('data a připomínky', () => {
     expect(relative('2026-11-18', t)).toBe('před 2 dny');
   });
   it('zpožděný a nadcházející obsah, follow-upy', () => {
-    const d = createSeedData();
+    const d = createSeedData({ demo: true });
     const content = [
       { ...d.content[0], id: 'a', date: '2026-11-18', stage: 'prep' as const },
       { ...d.content[0], id: 'b', date: '2026-11-22', stage: 'scheduled' as const },
@@ -67,6 +84,20 @@ describe('generátor', () => {
     expect(r.captions.join(' ')).toContain('SPA');
     expect(r.captions.join(' ')).not.toMatch(/\{\w+\}/);
     expect(r.hashtags).toContain('#hcsparta');
+  });
+});
+
+describe('meme styl', () => {
+  it('vrátí memy s doplněným klubem, krátkým popiskem a málo hashtagy', () => {
+    for (let seed = 1; seed < 40; seed++) {
+      const r = generateIdeas({ club: 'Kometa', clubHashtag: '#kometabrno', text: 'KOM', laceName: 'Modrá', platform: 'ig-post', tone: 'meme', price: 290, web: 'offsidestore.cz', claim: 'Nos svůj klub. Kdekoliv.', seed });
+      expect(r.memes).toHaveLength(4);
+      for (const m of r.memes) {
+        expect(`${m.top} ${m.bottom} ${m.caption}`).not.toMatch(/\{\w+\}/);
+        expect(m.caption.length).toBeLessThanOrEqual(90);
+      }
+      expect(r.hashtags.split(' ').length).toBeLessThanOrEqual(3);
+    }
   });
 });
 

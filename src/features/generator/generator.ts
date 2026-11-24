@@ -1,7 +1,8 @@
 import type { Platform } from '../../types';
 
-export type SocialTone = 'hype' | 'fan' | 'product' | 'behind';
+export type SocialTone = 'meme' | 'hype' | 'fan' | 'product' | 'behind';
 export const TONE_LABEL: Record<SocialTone, string> = {
+  meme: 'Meme (styl Jablkoňovny)',
   hype: 'Zápasový / hype',
   fan: 'Fanouškovský',
   product: 'Produktový',
@@ -22,15 +23,45 @@ export interface SocialInput {
   seed: number;
 }
 
+/** Meme: velký text na obrázku (nahoře / dole) + krátký popisek. */
+export interface MemeIdea {
+  top: string;
+  bottom: string;
+  caption: string;
+}
+
 export interface SocialIdeas {
+  memes: MemeIdea[];
   captions: string[];
   hooks: string[];
   visual: string[];
   hashtags: string;
 }
 
+/**
+ * Meme šablony ve stylu Jablkoňovny: situace, ve které se fanoušek pozná, velký text na fotce
+ * a jedna krátká věta s emoji v popisku. {club} = krátký název klubu, {text} = zkratka.
+ */
+const MEMES: MemeIdea[] = [
+  { top: 'Babička: Zase utrácíš za ten hokej?', bottom: 'Já: Je to tkanička z brusle, babi. Za 290.', caption: 'Babička to pochopila. Asi. 😅' },
+  { top: '2013: šála po dědovi', bottom: '2026: tkanička z brusle na ruce', caption: 'Ten čas tak letí 🥲' },
+  { top: 'Když ti v práci zakážou dres', bottom: '{text} pod rukávem', caption: 'Nos svůj klub. Kdekoliv. 🤫' },
+  { top: 'Permanentka 6 000 Kč · pivo 70 Kč · náramek 290 Kč', bottom: 'Fandit {club}: k nezaplacení', caption: 'Účetní to nechápe. My jo. 🏒' },
+  { top: 'Tým prohraje 0:5', bottom: 'Náramek {text}: pořád na ruce', caption: 'Věrnost se nesundává. 💪' },
+  { top: 'POV: přítelkyně fandí jinému klubu', bottom: 'Kupuješ jí náramek. Svůj.', caption: 'Láska má hranice. A barvy. ❤️🖤' },
+  { top: 'Já po třetí třetině', bottom: 'Můj náramek po třetí třetině', caption: 'Pot, mráz, pivo. Vydrží všechno. 💧' },
+  { top: 'Táta: Za nás se fandilo jinak', bottom: 'Taky táta: „Objednáš mi taky {text}?“', caption: 'Táta je v tom s námi. 😂' },
+  { top: 'Když máš jméno na 13 písmen', bottom: 'a maximum je 12', caption: 'Promiň, Maxmiliánku. 🥲' },
+  { top: 'Mise: dostat náramek přes hlídku u vstupu', bottom: 'Splněno ✅', caption: 'Mise splněna! 🫡' },
+  { top: 'Těšíš se na Vánoce?', bottom: 'Ježíšek letos fandí {club}', caption: 'Těšíš se na Vánoce? 🎄' },
+  { top: 'Rozhodčí: nevidím faul', bottom: 'Taky rozhodčí: nevidí ani tenhle náramek', caption: 'Brýle nepomůžou. 👀' },
+  { top: 'Kamarád: Zase nový náramek?', bottom: 'Já: To je {text}. To se počítá jako dres.', caption: 'Nepočítá. Ale zní to dobře. 😎' },
+  { top: 'Derby za týden', bottom: 'Já už v plné výbavě', caption: 'Kdo je taky připravený? 🔥' },
+];
+
 // Hlas značky podle offsidestore.cz: krátké věty, „tkanička z brusle“, „barva podle dresu“, „splétáno rukou“.
 const CAPTIONS: Record<SocialTone, string[]> = {
+  meme: MEMES.map((m) => m.caption),
   hype: [
     'Zápasový den. {text} na zápěstí. 🏒🔥\n{clubLine}Tkanička z brusle, zkratka v pletení.\n👉 {web}',
     'Kdo jde dneska na zimák? 🙋 {text} je připravený na buly.\n{clubLine}Splétáno rukou, kus po kuse.\n🔗 {web}',
@@ -116,14 +147,22 @@ export function generateIdeas(i: SocialInput): SocialIdeas {
   const tt = slug(text);
   if (tt.length >= 3) tags.add(`#${tt}`);
   if (i.platform === 'tiktok' || i.platform === 'ig-reel') ['#hockeytok', '#satisfying'].forEach((t) => tags.add(t));
-  if (i.platform === 'ig-story') {
+  if (i.tone === 'meme') {
+    // memy: málo hashtagů, ať nevypadají jako reklama
+    tags.clear();
+    tags.add('#offsidestore');
+    if (i.clubHashtag) tags.add(i.clubHashtag);
+    tags.add('#hokej');
+  } else if (i.platform === 'ig-story') {
     tags.clear();
     tags.add('#offsidestore');
     tags.add(i.clubHashtag ?? '#hokej');
   }
 
+  const memes = i.tone === 'meme' ? pick(MEMES, 4, rand).map((m) => ({ top: fill(m.top), bottom: fill(m.bottom), caption: fill(m.caption) })) : [];
   return {
-    captions: pick(CAPTIONS[i.tone], 3, rand).map(fill),
+    memes,
+    captions: i.tone === 'meme' ? memes.map((m) => m.caption) : pick(CAPTIONS[i.tone], 3, rand).map(fill),
     hooks: pick(HOOKS[i.platform], 3, rand).map(fill),
     visual: pick(VISUAL[i.platform], 2, rand).map(fill),
     hashtags: [...tags].join(' '),
