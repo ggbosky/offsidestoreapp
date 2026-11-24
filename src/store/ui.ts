@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type { Bracelet, Contact, ContentItem } from '../types';
 
-export type TabId = 'dashboard' | 'trends' | 'content' | 'crm' | 'bracelets' | 'generator' | 'settings';
+export type TabId = 'dashboard' | 'trends' | 'studio' | 'content' | 'crm' | 'bracelets' | 'generator' | 'settings';
 
 /** Stav rozhraní: aktivní záložka a otevřené editory (sdílené napříč stránkami). */
 interface UiState {

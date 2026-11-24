@@ -101,6 +101,21 @@ describe('meme styl', () => {
   });
 });
 
+describe('carousel šablony', () => {
+  it('každá šablona dá 1–10 slidů bez prázdných míst v textu', async () => {
+    const { TEMPLATES } = await import('../features/carousel/model');
+    const club = createSeedData().clubs.find((c) => c.id === 'kom');
+    for (const t of TEMPLATES) {
+      for (const c of [club, undefined]) {
+        const slides = t.build(c);
+        expect(slides.length).toBeGreaterThanOrEqual(1);
+        expect(slides.length).toBeLessThanOrEqual(10);
+        for (const sl of slides) for (const f of [sl.kicker, sl.text, sl.text2]) expect(f).not.toMatch(/undefined|\{|\s{2,}|^\s|\s$/);
+      }
+    }
+  });
+});
+
 describe('heslo', () => {
   it('SHA-256 a ověření', async () => {
     const hex = Array.from(sha256Fallback(new TextEncoder().encode('offside2026')), (b) => b.toString(16).padStart(2, '0')).join('');

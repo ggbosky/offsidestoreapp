@@ -1,4 +1,4 @@
-import { CalendarDays, Flame, Gauge, Gem, Lock, Save, Settings, Sparkles, Users } from 'lucide-react';
+import { CalendarDays, Flame, Gauge, Gem, Images, Lock, Save, Settings, Sparkles, Users } from 'lucide-react';
 import { Logo } from './Logo';
 import { useData, getAppData } from '../store/data';
 import { useLock } from '../store/lock';
@@ -10,6 +10,7 @@ import { toast } from '../store/toast';
 const TABS: Array<{ id: TabId; label: string; icon: typeof Gauge }> = [
   { id: 'dashboard', label: 'Přehled', icon: Gauge },
   { id: 'trends', label: 'Trendy', icon: Flame },
+  { id: 'studio', label: 'Tvorba', icon: Images },
   { id: 'content', label: 'Obsah', icon: CalendarDays },
   { id: 'crm', label: 'Kontakty', icon: Users },
   { id: 'bracelets', label: 'Náramky', icon: Gem },

@@ -120,6 +120,15 @@ function createWindow() {
       if (/^https?:\/\//.test(url)) shell.openExternal(url);
     }
   });
+  // Stahování (zálohy, slidy carouselu) rovnou do složky Stažené soubory, bez dotazu u každého souboru.
+  win.webContents.session.on('will-download', (_e, item) => {
+    const dir = app.getPath('downloads');
+    const ext = path.extname(item.getFilename());
+    const base = path.basename(item.getFilename(), ext);
+    let target = path.join(dir, item.getFilename());
+    for (let n = 2; fs.existsSync(target); n++) target = path.join(dir, `${base} (${n})${ext}`);
+    item.setSavePath(target);
+  });
   win.on('closed', () => (win = null));
 }
 

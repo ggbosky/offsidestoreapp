@@ -16,6 +16,7 @@ import { BraceletEditor } from './features/bracelets/BraceletEditor';
 import { GeneratorPage } from './features/generator/GeneratorPage';
 import { SettingsPage } from './features/settings/SettingsPage';
 import { TrendsPage } from './features/trends/TrendsPage';
+import { CarouselPage } from './features/carousel/CarouselPage';
 import { useIntegrations } from './store/integrations';
 import { runTrendSearch } from './features/trends/runSearch';
 
@@ -81,6 +82,7 @@ export default function App() {
       <main className="mx-auto max-w-[1480px] px-4 pb-20 pt-7 sm:px-6">
         {tab === 'dashboard' && <DashboardPage />}
         {tab === 'trends' && <TrendsPage />}
+        {tab === 'studio' && <CarouselPage />}
         {tab === 'content' && <ContentPage />}
         {tab === 'crm' && <CrmPage />}
         {tab === 'bracelets' && <BraceletsPage />}
