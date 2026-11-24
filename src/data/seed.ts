@@ -30,6 +30,7 @@ export const DEFAULT_SETTINGS: Settings = {
   autoTrends: 'off',
   trendFocus: '',
   demoPurged: true,
+  showLogo: true,
 };
 
 const now = () => new Date().toISOString();

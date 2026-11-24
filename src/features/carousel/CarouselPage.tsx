@@ -4,34 +4,33 @@ import { useData, newContent } from '../../store/data';
 import { useUi } from '../../store/ui';
 import { Field } from '../../components/ui';
 import { resizeImage } from '../../lib/image';
-import { downloadBlob, svgToPngBlob, toDataUrl } from '../../lib/svgExport';
+import { downloadBlob, svgToPngBlob } from '../../lib/svgExport';
 import { uid } from '../../lib/id';
 import { toast } from '../../store/toast';
 import { askConfirm } from '../../store/confirm';
-import { GRADE_LABEL, PRODUCT_ABBRS, STYLE_LABEL, TEMPLATES, newSlide, productPhoto, useCarousel, type Grade, type Slide, type SlideStyle } from './model';
+import { GRADE_LABEL, PRODUCT_ABBRS, STYLE_LABEL, TEMPLATES, newSlide, productPhoto, useCarousel, type Grade, type SlideStyle } from './model';
 import { SlideSvg } from './SlideSvg';
+import { photoPatch, withProductPhotos } from './photos';
+import { LogoToggle } from '../../components/LogoToggle';
 
-function imageSize(src: string): Promise<{ w: number; h: number }> {
-  return new Promise((res) => {
-    const img = new Image();
-    img.onload = () => res({ w: img.naturalWidth, h: img.naturalHeight });
-    img.onerror = () => res({ w: 0, h: 0 });
-    img.src = src;
-  });
-}
-
-async function photoPatch(src: string): Promise<Partial<Slide>> {
-  const data = await toDataUrl(src);
-  const { w, h } = await imageSize(data);
-  return { photo: data, photoW: w, photoH: h, focusX: 50, focusY: 50, zoom: 1 };
-}
+const FIELD_LABELS: Record<SlideStyle, [string, string, string]> = {
+  titulek: ['Nadpis', 'Druhý řádek', 'Malý nadpis (klub, téma)'],
+  srovnani: ['Horní popisek (jinde / tehdy)', 'Dolní popisek (u nás / teď)', 'Otázka nahoře'],
+  promo: ['Název produktu', 'Doplněk pod cenou', 'Malý nadpis'],
+  dokument: ['Titulek', 'Druhý řádek', 'Malý nadpis (místo, datum, kapitola)'],
+  meme: ['Text nahoře', 'Text dole', ''],
+  text: ['Text', 'Druhý řádek', 'Malý nadpis'],
+};
 
 export function CarouselPage() {
   const { clubs, bracelets } = useData();
   const openContent = useUi((s) => s.openContent);
-  const { slides, active, settings, set, update, setActive, setSettings } = useCarousel();
+  const { slides, active, settings: rawSettings, set, update, setActive, setSettings } = useCarousel();
+  const showLogo = useData((s) => s.settings.showLogo);
+  const settings = { ...rawSettings, showLogo };
   const [clubId, setClubId] = useState(clubs[0]?.id ?? '');
   const [busy, setBusy] = useState(false);
+  const [target, setTarget] = useState<1 | 2>(1);
   const fileRef = useRef<HTMLInputElement>(null);
   const exportRefs = useRef<Array<SVGSVGElement | null>>([]);
   const club = clubs.find((c) => c.id === clubId);
@@ -42,25 +41,13 @@ export function CarouselPage() {
     const t = TEMPLATES.find((x) => x.id === id)!;
     if (slides.length && !(await askConfirm(`Nahradit rozpracovaný carousel šablonou „${t.name}“?`))) return;
     const built = t.build(club);
-    // fotky: náramek vybraného klubu z e-shopu (a další kluby na dalších slidech)
-    const abbr = club?.abbr && PRODUCT_ABBRS.includes(club.abbr) ? club.abbr : 'LIT';
-    // dokumentární střih: celek → detail tkaničky → detail písmen → …
-    const shots = [
-      { zoom: 1, focusX: 50, focusY: 40 },
-      { zoom: 1.9, focusX: 15, focusY: 55 },
-      { zoom: 1.5, focusX: 70, focusY: 30 },
-      { zoom: 2.3, focusX: 45, focusY: 62 },
-      { zoom: 1.25, focusX: 35, focusY: 50 },
-    ];
-    const withPhotos = await Promise.all(
-      built.map(async (s, i) => (s.style === 'text' || id === 'prazdny' ? s : { ...s, ...(await photoPatch(productPhoto(abbr))), ...shots[i % shots.length] })),
-    );
+    const withPhotos = id === 'prazdny' ? built : await withProductPhotos(built, club?.abbr);
     set(withPhotos);
   }
 
   // první otevření: dokumentární šablona
   useEffect(() => {
-    if (!slides.length && clubs.length) applyTemplate('jak-vznika');
+    if (!slides.length && clubs.length) applyTemplate('srovnani-promo');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -75,6 +62,10 @@ export function CarouselPage() {
   async function onFiles(files: FileList) {
     const list = Array.from(files).filter((f) => f.type.startsWith('image/')).slice(0, 10);
     if (!list.length) return;
+    if (slide?.style === 'srovnani' && target === 2) {
+      update(slide.id, await photoPatch(await resizeImage(list[0], 2000, 0.9), 2));
+      return;
+    }
     const patches = await Promise.all(list.map(async (f) => photoPatch(await resizeImage(f, 2000, 0.9))));
     let next = [...slides];
     let first = true;
@@ -247,14 +238,19 @@ export function CarouselPage() {
                   </button>
                 ))}
               </div>
-              <Field label={slide.style === 'meme' ? 'Text nahoře' : slide.style === 'dokument' ? 'Titulek' : 'Nadpis'}>
+              <Field label={FIELD_LABELS[slide.style][0]}>
                 <textarea id="slide-text" className="input min-h-[64px]" value={slide.text} onChange={(e) => update(slide.id, { text: e.target.value })} />
               </Field>
-              <Field label={slide.style === 'meme' ? 'Text dole' : 'Druhý řádek'}>
+              {slide.style === 'promo' && (
+                <Field label="Cena">
+                  <input id="slide-price" className="input text-lg font-extrabold text-brand" value={slide.price} onChange={(e) => update(slide.id, { price: e.target.value })} placeholder="290 Kč" />
+                </Field>
+              )}
+              <Field label={FIELD_LABELS[slide.style][1]}>
                 <textarea id="slide-text2" className="input min-h-[52px]" value={slide.text2} onChange={(e) => update(slide.id, { text2: e.target.value })} />
               </Field>
               {slide.style !== 'meme' && (
-                <Field label="Malý nadpis (místo, datum, kapitola)">
+                <Field label={FIELD_LABELS[slide.style][2]}>
                   <input id="slide-kicker" className="input" value={slide.kicker} onChange={(e) => update(slide.id, { kicker: e.target.value })} placeholder="LITVÍNOV · LISTOPAD 2026" />
                 </Field>
               )}
@@ -262,6 +258,22 @@ export function CarouselPage() {
               {slide.style !== 'text' && (
                 <div className="space-y-2 border-t border-line pt-3">
                   <div className="label">Fotka</div>
+                  {slide.style === 'srovnani' && (
+                    <div className="flex gap-1.5">
+                      <button className={`chip ${target === 1 ? 'chip-on' : 'chip-off'}`} onClick={() => setTarget(1)}>
+                        Horní fotka
+                      </button>
+                      <button className={`chip ${target === 2 ? 'chip-on' : 'chip-off'}`} onClick={() => setTarget(2)}>
+                        Dolní fotka
+                      </button>
+                      {slide.photo2 && (
+                        <button className="chip chip-off" onClick={() => update(slide.id, { photo2: null })}>
+                          <X size={12} /> Dolní pryč
+                        </button>
+                      )}
+                    </div>
+                  )}
+                  {slide.style === 'srovnani' && !slide.photo2 && <p className="text-xs text-faint">Bez dolní fotky se použije horní – nahoře černobíle, dole barevně.</p>}
                   <div className="flex gap-2">
                     <button className="btn-ghost flex-1 py-2 text-xs" onClick={() => fileRef.current?.click()}>
                       <ImagePlus size={14} /> Nahrát fotky
@@ -275,7 +287,7 @@ export function CarouselPage() {
                   <p className="text-xs text-faint">Víc fotek najednou = víc slidů. Fotky náramků z e-shopu:</p>
                   <div className="grid grid-cols-6 gap-1.5">
                     {libraryPhotos.map((p) => (
-                      <button key={p.key} className="relative aspect-[3/4] overflow-hidden rounded-md ring-1 ring-white/10 hover:ring-brand" onClick={async () => update(slide.id, await photoPatch(p.src))} title={p.label}>
+                      <button key={p.key} className="relative aspect-[3/4] overflow-hidden rounded-md ring-1 ring-white/10 hover:ring-brand" onClick={async () => update(slide.id, await photoPatch(p.src, slide.style === 'srovnani' ? target : 1))} title={p.label}>
                         <img src={p.src} alt={p.label} className="h-full w-full object-cover" loading="lazy" />
                         <span className="absolute bottom-0 left-0 right-0 bg-black/60 text-[9px] font-bold">{p.label}</span>
                       </button>
@@ -330,11 +342,11 @@ export function CarouselPage() {
                 </button>
               ))}
             </div>
-            <div className="grid grid-cols-3 gap-2 text-sm">
+            <div className="grid grid-cols-3 items-center gap-2 text-sm">
+              <LogoToggle className="justify-self-start" />
               {(
                 [
                   ['grain', 'Filmové zrno'],
-                  ['showLogo', 'Logo'],
                   ['showCounter', 'Číslo slidu'],
                 ] as const
               ).map(([k, l]) => (

@@ -12,6 +12,8 @@ interface Props {
   meme?: { top: string; bottom: string } | null;
   /** Vlastní fotka (data URL) – pozadí memu */
   photo?: string | null;
+  /** Logo na obrázku (lze vypnout) */
+  showLogo?: boolean;
 }
 
 /** Jednoduché zalomení textu na řádky podle počtu znaků. */
@@ -49,7 +51,7 @@ function MemeText({ text, x, y, anchorBottom, size, maxChars }: { text: string; 
 const FONT = "'Assistant Variable', Assistant, 'Arial Black', Arial, sans-serif";
 
 /** Vizuál příspěvku ve stylu offsidestore.cz (tmavě červený přechod, bílé písmo). SVG → PNG. */
-export const PostPreview = forwardRef<SVGSVGElement, Props>(function PostPreview({ vertical, color, text, title, subtitle, meme, photo }, ref) {
+export const PostPreview = forwardRef<SVGSVGElement, Props>(function PostPreview({ vertical, color, text, title, subtitle, meme, photo, showLogo = true }, ref) {
   const W = 1080;
   const H = vertical ? 1920 : 1350;
   const cy = H * 0.52;
@@ -86,6 +88,7 @@ export const PostPreview = forwardRef<SVGSVGElement, Props>(function PostPreview
         {meme.top && <MemeText text={meme.top} x={W / 2} y={vertical ? 290 : 200} size={size} maxChars={vertical ? 16 : 18} />}
         {meme.bottom && <MemeText text={meme.bottom} x={W / 2} y={H - (vertical ? 300 : 110)} anchorBottom size={size} maxChars={vertical ? 16 : 18} />}
         {/* logo vlevo nahoře */}
+        {showLogo && (
         <g transform="translate(48 44)" filter="url(#mm-logo-shadow)">
           <g transform="scale(0.1)">
             <rect x="293" y="0" width="115" height="1001" fill="#fff" />
@@ -93,6 +96,7 @@ export const PostPreview = forwardRef<SVGSVGElement, Props>(function PostPreview
             <circle cx="575" cy="375" r="125" fill="#EC0016" />
           </g>
         </g>
+        )}
       </svg>
     );
   }
@@ -112,6 +116,7 @@ export const PostPreview = forwardRef<SVGSVGElement, Props>(function PostPreview
       <rect width={W} height={H} fill="url(#pp-v)" />
       <rect x={W - 230} y={0} width={18} height={H} fill="#fff" opacity="0.08" />
 
+      {showLogo && (
       <g transform={`translate(80 ${vertical ? 170 : 90})`}>
         <g transform="scale(0.075)">
           <rect x="293" y="0" width="115" height="1001" fill="#fff" />
@@ -122,6 +127,7 @@ export const PostPreview = forwardRef<SVGSVGElement, Props>(function PostPreview
           OFFSIDESTORE
         </text>
       </g>
+      )}
 
       <text x={80} y={cy - (vertical ? 420 : 330)} fontFamily={FONT} fontWeight={800} fontSize={vertical ? 120 : 108} fill="#fff" letterSpacing={1}>
         {title.toUpperCase()}

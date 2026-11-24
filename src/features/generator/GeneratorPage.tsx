@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
 import { BookmarkPlus, Copy, Download, Hash, ImagePlus, Lightbulb, RefreshCw, Type, Video, X } from 'lucide-react';
+import { LogoToggle } from '../../components/LogoToggle';
 import { resizeImage } from '../../lib/image';
 import type { Platform } from '../../types';
 import { useData, newContent } from '../../store/data';
@@ -229,6 +230,7 @@ export function GeneratorPage() {
             <LaceDot color={color} />
             <span className="font-bold">Vizuál</span>
             <span className="text-xs text-faint">{platform === 'ig-post' ? '1080 × 1350 (4:5)' : '1080 × 1920 (9:16)'}</span>
+            <LogoToggle className="ml-auto" />
           </div>
           {memeActive && (
             <div className="mb-4 space-y-2">
@@ -267,6 +269,7 @@ export function GeneratorPage() {
               subtitle={club?.name ?? 'Vlastní nápis'}
               meme={memeActive}
               photo={photo}
+              showLogo={settings.showLogo}
             />
           </div>
           <button

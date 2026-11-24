@@ -124,6 +124,8 @@ export interface Settings {
   trendFocus: string;
   /** Ukázková data byla jednou odstraněna (při aktualizaci z verze s ukázkami). */
   demoPurged: boolean;
+  /** Logo Offsidestore na vytvářených obrázcích (Generátor, Tvorba) */
+  showLogo: boolean;
 }
 
 export interface TrendBrief {

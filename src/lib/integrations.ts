@@ -92,6 +92,8 @@ export interface TrendIdea {
   concept: string;
   /** Text na obrázek (meme) – „NAHOŘE / DOLE“ */
   imageText?: string;
+  /** Carousel: info → srovnání → promo */
+  slides?: Array<{ style: string; kicker: string; text: string; text2: string; price: string }>;
   hook: string;
   caption: string;
   hashtags: string;

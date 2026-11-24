@@ -51,6 +51,11 @@ Pravidla:
 - imagePrompt piš anglicky jako instrukci pro úpravu VLASTNÍ fotky náramku (Gemini image edit): co změnit, jaký styl, jaký text na obrázku (text na obrázku česky v uvozovkách).
 - Bezpečnost značky: žádná cizí loga, ochranné známky ani herní/filmové assety ve vizuálu (jen styl/odkaz slovy), žádné tváře skutečných lidí bez svolení, žádné tragédie, politika ani zesměšňování konkrétních lidí; nenaznačuj oficiální spolupráci s klubem. U rizikovějších nápadů to otevřeně napiš do riskNote.
 - imageText = text na obrázek česky, formát „NAHOŘE / DOLE“ (oddělit lomítkem), krátké a úderné.
+- slides = CAROUSEL ve stylu Jablkoňovny, 4–6 slidů, vždy v tomto pořadí:
+  1) style „titulek“: INFO – co se děje / o čem trend je (kicker = krátké téma, text = nadpis max ~6 slov, text2 = „Swipe →“ nebo krátké doplnění),
+  2–4) style „srovnani“: srovnání nahoře vs. dole (kicker = krátká otázka nebo kontext, text = horní „jinde / tehdy / bez náramku“, text2 = dolní „u nás / teď / s náramkem“, každé max ~5 slov, vtipná pointa dole),
+  poslední) style „promo“: text = produkt (např. „Náramek SPA“), price = „290 Kč“ (nebo „od 290 Kč“), text2 = krátký benefit, kicker = „OFFSIDESTORE“.
+  U slidů bez ceny dej price = "".
 - shelfLifeDays = jak dlouho má smysl to publikovat (memy 1–3 dny, události do data konání).
 - clubs = zkratky klubů, kterých se nápad týká (může být prázdné).
 - sourceUrls = URL z přehledu, ze kterých nápad vychází.
@@ -66,6 +71,15 @@ const IdeasSchema = z.object({
       format: z.enum(['meme', 'carousel', 'reel', 'story', 'tiktok', 'foto']),
       concept: z.string(),
       imageText: z.string(),
+      slides: z.array(
+        z.object({
+          style: z.enum(['titulek', 'srovnani', 'promo', 'dokument', 'meme', 'text']),
+          kicker: z.string(),
+          text: z.string(),
+          text2: z.string(),
+          price: z.string(),
+        }),
+      ),
       hook: z.string(),
       caption: z.string(),
       hashtags: z.string(),

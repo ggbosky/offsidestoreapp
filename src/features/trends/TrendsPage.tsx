@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { CalendarPlus, ChevronDown, Copy, Eye, Flame, ImagePlus, Loader2, RefreshCw, Search, ShieldAlert, Sparkles, Trash2, TrendingUp, X } from 'lucide-react';
+import { CalendarPlus, ChevronDown, Copy, Eye, Flame, ImagePlus, Images, Loader2, RefreshCw, Search, ShieldAlert, Sparkles, Trash2, TrendingUp, X } from 'lucide-react';
+import { slidesFromIdea, useCarousel } from '../carousel/model';
+import { withProductPhotos } from '../carousel/photos';
 import type { TrendIdea, TrendRisk } from '../../lib/integrations';
 import { useData } from '../../store/data';
 import { useUi } from '../../store/ui';
@@ -33,6 +35,7 @@ type Filter = 'novy' | 'sledovat' | 'pouzito' | 'zahozeno';
 export function TrendsPage() {
   const { trendIdeas, trendBrief, settings, shopify, bracelets, clubs, updateSettings, setTrendStatus, clearDismissedTrends, saveContent } = useData();
   const openContent = useUi((s) => s.openContent);
+  const setTab = useUi((s) => s.setTab);
   const { status, serverError, google, googleError, loadStatus, loadGoogle } = useIntegrations();
   const { busy, startedAt, error } = useTrendSearch();
   const [focus, setFocus] = useState(settings.trendFocus);
@@ -64,6 +67,14 @@ export function TrendsPage() {
     setTrendStatus(i.id, 'pouzito');
     toast('Nápad je v plánu obsahu na dnešek.');
     openContent(item);
+  }
+
+  async function toCarousel(i: TrendIdea) {
+    if (!i.slides?.length) return;
+    const slides = await withProductPhotos(slidesFromIdea(i.slides), i.clubs[0]);
+    useCarousel.getState().set(slides);
+    setTab('studio');
+    toast('Carousel je v Tvorbě – uprav fotky a texty a stáhni slidy.');
   }
 
   return (
@@ -228,7 +239,7 @@ export function TrendsPage() {
           ) : (
             <div className="grid gap-4 2xl:grid-cols-2">
               {list.map((i) => (
-                <IdeaCard key={i.id} i={i} onPlan={() => toPlan(i)} onStudio={() => setStudio(i.imagePrompt)} onStatus={(s) => setTrendStatus(i.id, s)} />
+                <IdeaCard key={i.id} i={i} onPlan={() => toPlan(i)} onStudio={() => setStudio(i.imagePrompt)} onCarousel={() => toCarousel(i)} onStatus={(s) => setTrendStatus(i.id, s)} />
               ))}
             </div>
           )}
@@ -240,7 +251,7 @@ export function TrendsPage() {
   );
 }
 
-function IdeaCard({ i, onPlan, onStudio, onStatus }: { i: TrendIdea; onPlan: () => void; onStudio: () => void; onStatus: (s: TrendIdea['status']) => void }) {
+function IdeaCard({ i, onPlan, onStudio, onCarousel, onStatus }: { i: TrendIdea; onPlan: () => void; onStudio: () => void; onCarousel: () => void; onStatus: (s: TrendIdea['status']) => void }) {
   const expired = isExpired(i);
   const left = Math.ceil((Date.parse(i.createdAt) + i.shelfLifeDays * 86_400_000 - Date.now()) / 86_400_000);
   return (
@@ -296,6 +307,20 @@ function IdeaCard({ i, onPlan, onStudio, onStatus }: { i: TrendIdea; onPlan: () 
         </div>
       )}
 
+      {i.slides && i.slides.length > 0 && (
+        <ol className="mt-3 space-y-1 rounded-xl border border-line bg-bg/60 p-3 text-sm">
+          {i.slides.map((sl, k) => (
+            <li key={k} className="flex gap-2">
+              <span className="w-5 shrink-0 font-bold text-faint">{k + 1}.</span>
+              <span className="w-16 shrink-0 text-[11px] font-extrabold uppercase tracking-wider text-brand">{sl.style === 'srovnani' ? 'srovnání' : sl.style === 'titulek' ? 'info' : sl.style}</span>
+              <span className="min-w-0 text-muted">
+                {sl.style === 'srovnani' ? `${sl.text} ↕ ${sl.text2}` : [sl.text, sl.price].filter(Boolean).join(' · ')}
+              </span>
+            </li>
+          ))}
+        </ol>
+      )}
+
       {i.risk !== 'nizke' && i.riskNote && (
         <p className="mt-3 flex items-start gap-2 text-xs text-warn">
           <ShieldAlert size={14} className="mt-0.5 shrink-0" /> {i.riskNote}
@@ -312,7 +337,12 @@ function IdeaCard({ i, onPlan, onStudio, onStatus }: { i: TrendIdea; onPlan: () 
       )}
 
       <div className="mt-auto flex flex-wrap gap-2 pt-4">
-        <button className="btn-primary px-4 py-2" onClick={onPlan}>
+        {i.slides && i.slides.length > 0 && (
+          <button className="btn-primary px-4 py-2" onClick={onCarousel}>
+            <Images size={15} /> Otevřít jako carousel ({i.slides.length})
+          </button>
+        )}
+        <button className={i.slides?.length ? 'btn-ghost px-4 py-2' : 'btn-primary px-4 py-2'} onClick={onPlan}>
           <CalendarPlus size={15} /> Do plánu
         </button>
         {i.imagePrompt && (

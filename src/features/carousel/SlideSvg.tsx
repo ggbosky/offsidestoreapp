@@ -22,7 +22,9 @@ export const SlideSvg = forwardRef<SVGSVGElement, Props>(function SlideSvg({ sli
 
   // výřez fotky (cover + zoom + posun)
   let img = null;
-  if (s.photo && !isText) {
+  if (s.style === 'srovnani') {
+    img = <Split s={s} H={H} rid={rid} grade={settings.grade !== 'zadny'} />;
+  } else if (s.photo && !isText) {
     const iw = s.photoW || W;
     const ih = s.photoH || H;
     const scale = Math.max(W / iw, H / ih) * s.zoom;
@@ -52,6 +54,26 @@ export const SlideSvg = forwardRef<SVGSVGElement, Props>(function SlideSvg({ sli
             <feFuncB type="linear" slope={slope} intercept={-(slope - 1) / 2} />
           </feComponentTransfer>
         </filter>
+        <filter id={`bw${rid}`} colorInterpolationFilters="sRGB">
+          <feColorMatrix type="saturate" values="0" />
+          <feComponentTransfer>
+            <feFuncR type="linear" slope={1.15} intercept={-0.06} />
+            <feFuncG type="linear" slope={1.15} intercept={-0.06} />
+            <feFuncB type="linear" slope={1.15} intercept={-0.06} />
+          </feComponentTransfer>
+        </filter>
+        <clipPath id={`top${rid}`}>
+          <rect x={0} y={0} width={W} height={H / 2} />
+        </clipPath>
+        <clipPath id={`bot${rid}`}>
+          <rect x={0} y={H / 2} width={W} height={H / 2} />
+        </clipPath>
+        <linearGradient id={`promo${rid}`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#000" stopOpacity="0.3" />
+          <stop offset="0.35" stopColor="#000" stopOpacity="0" />
+          <stop offset="0.55" stopColor="#000" stopOpacity="0.2" />
+          <stop offset="1" stopColor="#000" stopOpacity="0.92" />
+        </linearGradient>
         <filter id={`grain${rid}`} x="0" y="0" width="100%" height="100%">
           <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed={index + 3} stitchTiles="stitch" />
           <feColorMatrix type="saturate" values="0" />
@@ -78,7 +100,7 @@ export const SlideSvg = forwardRef<SVGSVGElement, Props>(function SlideSvg({ sli
       {/* pozadí */}
       {isText ? <rect width={W} height={H} fill="#050505" /> : <rect width={W} height={H} fill={`url(#empty${rid})`} />}
       {img}
-      {!isText && <rect width={W} height={H} fill={`url(#shade${rid})`} />}
+      {!isText && s.style !== 'srovnani' && <rect width={W} height={H} fill={`url(#${s.style === 'promo' ? 'promo' : 'shade'}${rid})`} />}
       {!isText && settings.grade !== 'zadny' && <rect width={W} height={H} fill={`url(#vig${rid})`} />}
       {settings.grain && <rect width={W} height={H} filter={`url(#grain${rid})`} opacity={isText ? 0.07 : 0.13} style={{ mixBlendMode: 'overlay' }} />}
 
@@ -86,6 +108,8 @@ export const SlideSvg = forwardRef<SVGSVGElement, Props>(function SlideSvg({ sli
       {s.style === 'titulek' && <Title s={s} H={H} vertical={settings.vertical} />}
       {s.style === 'meme' && <Meme s={s} H={H} vertical={settings.vertical} />}
       {s.style === 'text' && <TextSlide s={s} H={H} />}
+      {s.style === 'srovnani' && <SplitLabels s={s} H={H} />}
+      {s.style === 'promo' && <Promo s={s} H={H} vertical={settings.vertical} />}
 
       {settings.showLogo && (
         <g transform={`translate(48 ${settings.vertical ? 140 : 44})`} filter={`url(#sh${rid})`}>
@@ -226,6 +250,119 @@ function TextSlide({ s, H }: { s: Slide; H: number }) {
           {t}
         </text>
       ))}
+    </g>
+  );
+}
+
+function cover(iw: number, ih: number, bx: number, by: number, bw: number, bh: number, zoom = 1, fx = 50, fy = 50) {
+  const scale = Math.max(bw / (iw || bw), bh / (ih || bh)) * zoom;
+  const w = (iw || bw) * scale;
+  const h = (ih || bh) * scale;
+  return { x: bx + (bw - w) * (fx / 100), y: by + (bh - h) * (fy / 100), width: w, height: h };
+}
+
+/** Srovnání: nahoře „jinde / tehdy“, dole „u nás / teď“. Bez druhé fotky je horní polovina černobílá. */
+function Split({ s, H, rid, grade }: { s: Slide; H: number; rid: string; grade: boolean }) {
+  const half = H / 2;
+  const topSrc = s.photo;
+  const botSrc = s.photo2 ?? s.photo;
+  const botW = s.photo2 ? s.photo2W : s.photoW;
+  const botH = s.photo2 ? s.photo2H : s.photoH;
+  return (
+    <g>
+      <rect width={W} height={H} fill="#111" />
+      {topSrc && (
+        <g clipPath={`url(#top${rid})`}>
+          <image href={topSrc} {...cover(s.photoW, s.photoH, 0, 0, W, half, s.zoom, s.focusX, s.focusY)} preserveAspectRatio="none" filter={s.photo2 ? (grade ? `url(#grade${rid})` : undefined) : `url(#bw${rid})`} />
+        </g>
+      )}
+      {botSrc && (
+        <g clipPath={`url(#bot${rid})`}>
+          <image href={botSrc} {...cover(botW, botH, 0, half, W, half, s.photo2 ? 1 : s.zoom, s.photo2 ? 50 : s.focusX, s.photo2 ? 50 : s.focusY)} preserveAspectRatio="none" filter={grade ? `url(#grade${rid})` : undefined} />
+        </g>
+      )}
+      <rect x={0} y={0} width={W} height={260} fill={`url(#splitTop${rid})`} />
+      <defs>
+        <linearGradient id={`splitTop${rid}`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#000" stopOpacity="0.75" />
+          <stop offset="1" stopColor="#000" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <rect x={0} y={half - 4} width={W} height={8} fill="#fff" />
+    </g>
+  );
+}
+
+function Label({ text, x, y, red }: { text: string; x: number; y: number; red?: boolean }) {
+  const lines = wrapByWidth(text, 54, 880, 800).slice(0, 2);
+  const w = Math.max(...lines.map((l) => measure(l, 54, 800))) + 44;
+  const h = lines.length * 66 + 22;
+  return (
+    <g>
+      <rect x={x} y={y - h} width={w} height={h} rx={6} fill={red ? '#EC0016' : '#000'} opacity={red ? 1 : 0.85} />
+      {lines.map((l, i) => (
+        <text key={i} x={x + 22} y={y - h + 64 + i * 66} fontFamily={FONT} fontWeight={800} fontSize={54} fill="#fff">
+          {l}
+        </text>
+      ))}
+    </g>
+  );
+}
+
+function SplitLabels({ s, H }: { s: Slide; H: number }) {
+  const half = H / 2;
+  const q = s.kicker ? wrapByWidth(s.kicker, 46, 900, 800).slice(0, 2) : [];
+  return (
+    <g>
+      {q.map((l, i) => (
+        <text key={i} x={W / 2} y={150 + i * 56} textAnchor="middle" fontFamily={FONT} fontWeight={800} fontSize={46} fill="#fff">
+          {l}
+        </text>
+      ))}
+      {s.text && <Label text={s.text} x={48} y={half - 36} />}
+      {s.text2 && <Label text={s.text2} x={48} y={H - 48} red />}
+    </g>
+  );
+}
+
+/** Promo: náramek, velká cena, odkaz. */
+function Promo({ s, H, vertical }: { s: Slide; H: number; vertical: boolean }) {
+  const bottom = H - (vertical ? 300 : 90);
+  const sub = s.text2 ? wrapByWidth(s.text2, 34, 960, 500).slice(0, 2) : [];
+  const head = s.text ? wrapByWidth(s.text, 84, 960, 800).slice(0, 2) : [];
+  const ctaY = bottom;
+  const subTop = ctaY - 110 - sub.length * 44;
+  const priceY = subTop - 26;
+  const headTop = priceY - (s.price ? 150 : 10) - head.length * 88;
+  return (
+    <g fontFamily={FONT}>
+      {s.kicker && (
+        <>
+          <rect x={64} y={headTop - 58} width={44} height={6} fill="#EC0016" />
+          <text x={122} y={headTop - 46} fontWeight={700} fontSize={28} letterSpacing={4} fill="#fff">
+            {s.kicker.toUpperCase()}
+          </text>
+        </>
+      )}
+      {head.map((t, i) => (
+        <text key={i} x={60} y={headTop + 74 + i * 88} fontWeight={800} fontSize={84} fill="#fff">
+          {t}
+        </text>
+      ))}
+      {s.price && (
+        <text x={56} y={priceY} fontWeight={800} fontSize={150} fill="#EC0016" letterSpacing={-2} stroke="#000" strokeWidth={3} strokeOpacity={0.25} paintOrder="stroke">
+          {s.price}
+        </text>
+      )}
+      {sub.map((t, i) => (
+        <text key={i} x={64} y={subTop + 36 + i * 44} fontWeight={500} fontSize={34} fill="#fff" opacity={0.88}>
+          {t}
+        </text>
+      ))}
+      <rect x={60} y={ctaY - 84} width={430} height={84} rx={42} fill="#fff" />
+      <text x={275} y={ctaY - 30} textAnchor="middle" fontWeight={800} fontSize={36} letterSpacing={2} fill="#050505">
+        OFFSIDESTORE.CZ
+      </text>
     </g>
   );
 }
