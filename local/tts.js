@@ -12,21 +12,46 @@ function apiKey() {
 }
 const voiceName = () => { try { return localStorage.getItem("offside-gemini-voice") || "Puck"; } catch { return "Puck"; } };
 
-async function line(text, key) {
-  const r = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent", {
+const MODELS = ["gemini-2.5-flash-preview-tts", "gemini-2.5-pro-preview-tts"];
+const sleep = (ms) => new Promise((ok) => setTimeout(ok, ms));
+
+async function call(model, text, key) {
+  const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
     method: "POST",
     headers: { "Content-Type": "application/json", "x-goog-api-key": key },
     body: JSON.stringify({
-      contents: [{ parts: [{ text: `Řekni česky, přirozeně a s energií, jako mladý moderátor Instagram reelu: ${text}` }] }],
+      contents: [{ parts: [{ text }] }],
       generationConfig: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voiceName() } } } },
     }),
   });
   const j = await r.json().catch(() => ({}));
-  const b64 = j.candidates?.[0]?.content?.parts?.find((p) => p.inlineData)?.inlineData?.data;
-  if (/API key|PERMISSION/i.test(j.error?.message || "")) throw new Error("Gemini klíč nefunguje — zkontroluj ho v Nastavení");
-  if (!r.ok || !b64) throw new Error("Gemini: " + (j.error?.message || r.status));
-  const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
-  return new Int16Array(bytes.buffer, 0, bytes.length >> 1);
+  const msg = j.error?.message || "";
+  if (/API key|PERMISSION|API_KEY/i.test(msg)) throw Object.assign(new Error("Gemini klíč nefunguje — zkontroluj ho v Nastavení"), { fatal: true });
+  const c = j.candidates?.[0], b64 = c?.content?.parts?.find((p) => p.inlineData)?.inlineData?.data;
+  if (b64) {
+    const bytes = Uint8Array.from(atob(b64), (ch) => ch.charCodeAt(0));
+    return new Int16Array(bytes.buffer, 0, bytes.length >> 1);
+  }
+  const why = msg || (c?.finishReason ? "bez zvuku (" + c.finishReason + ")" : j.promptFeedback?.blockReason ? "zablokováno (" + j.promptFeedback.blockReason + ")" : "bez zvuku");
+  throw Object.assign(new Error(`${model}: ${r.status} ${why}`), { status: r.status });
+}
+
+// Gemini TTS now and then answers 200 with no audio, or 429 on the free tier → retry with
+// a plainer prompt, wait out rate limits, then fall back to the other TTS model.
+async function speak(script, key, onStatus) {
+  const styled = `Přečti česky, přirozeně a s energií, jako mladý moderátor Instagram reelu. Mezi řádky dělej krátkou pauzu.\n\n${script}`;
+  const tries = [[MODELS[0], styled], [MODELS[0], script], [MODELS[0], styled], [MODELS[1], styled], [MODELS[1], script]];
+  let last;
+  for (const [i, [model, text]] of tries.entries()) {
+    try { return await call(model, text, key); }
+    catch (e) {
+      if (e.fatal) throw e;
+      last = e; console.warn("Gemini TTS", i + 1, e.message);
+      if (e.status === 429) { onStatus?.("Gemini limit — čekám 30 s…"); await sleep(30000); }
+      else await sleep(1500);
+    }
+  }
+  throw new Error("Gemini hlas se nepovedl: " + last.message + (last.status === 429 ? " — bezplatný limit klíče je vyčerpaný, zkus to později" : ""));
 }
 
 function trim(pcm) {
@@ -48,21 +73,11 @@ function wav(chunks) {
   return new Blob([buf], { type: "audio/wav" });
 }
 
-// → { blob, words } with word timings from the exact per-scene durations
-export async function geminiVoice(spec) {
+// whole script in one request (natural flow, fewer failures); timings come from align.js
+export async function geminiVoice(spec, onStatus) {
   const key = apiKey();
-  const chunks = [], words = [];
-  let t = 0;
-  for (const s of spec.scenes) {
-    const text = (s.say || "").trim();
-    if (!text) continue;
-    const pcm = trim(await line(text, key));
-    const speech = pcm.length / SR, ws = text.split(/\s+/).filter(Boolean), total = ws.reduce((a, w) => a + w.length, 0) || 1;
-    let u = t;
-    for (const w of ws) { const k = speech * w.length / total; words.push([+u.toFixed(2), +(u + k).toFixed(2), w]); u += k; }
-    chunks.push(pcm, new Int16Array(Math.round(GAP * SR)));
-    t += speech + GAP;
-  }
-  if (!chunks.length) throw new Error("Scény nemají žádný text pro hlas");
-  return { blob: wav(chunks), words };
+  const script = spec.scenes.map((s) => (s.say || "").trim()).filter(Boolean).join("\n");
+  if (!script) throw new Error("Scény nemají žádný text pro hlas");
+  const pcm = trim(await speak(script, key, onStatus));
+  return { blob: wav([pcm]) };
 }

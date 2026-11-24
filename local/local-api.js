@@ -2,9 +2,9 @@
 // Same routes as the server, so public/app.js runs unchanged: projects, voice and renders live in IndexedDB.
 import { REELS, CAROUSELS, buildSpec } from "../lib/templates.mjs";
 import { caption } from "../lib/captions.mjs";
-import { analyseVoice } from "./align.js?v=1795539835253";
-import { geminiVoice } from "./tts.js?v=1795539835253";
-import { renderReel, renderCarousel } from "./render-web.js?v=1795539835253";
+import { analyseVoice } from "./align.js?v=1795540001971";
+import { geminiVoice } from "./tts.js?v=1795540001971";
+import { renderReel, renderCarousel } from "./render-web.js?v=1795540001971";
 
 /* ── storage ─────────────────────────────────────────── */
 const dbp = new Promise((ok, bad) => {
@@ -122,10 +122,10 @@ async function route(url, opts) {
   }
   if ((r = p.match(/^\/api\/projects\/([\w-]+)\/voice\/tts$/)) && m === "POST") {
     const x = await loadP(r[1]), script = scriptOf(x.spec);
-    const { blob, words } = await geminiVoice(x.spec);
-    const v = await analyseVoice(blob, script); // only for env + duration; words are exact per scene
+    const { blob } = await geminiVoice(x.spec, (m) => window.toast?.(m));
+    const v = await analyseVoice(blob, script);
     await putBlob("vb:" + r[1], blob);
-    await put("v:" + r[1], { ...v, words, kind: "gemini", file: "vo", at: 0.25, script });
+    await put("v:" + r[1], { ...v, kind: "gemini", file: "vo", at: 0.25, script });
     return full(r[1]);
   }
   if ((r = p.match(/^\/api\/projects\/([\w-]+)\/voice\/say$/))) throw new Error("Náhledový hlas jde jen v Mac aplikaci — nahraj hlas z AI Studia");
