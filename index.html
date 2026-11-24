@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="fonts/montserrat/600.css">
 <link rel="stylesheet" href="fonts/montserrat/800.css">
 <link rel="stylesheet" href="fonts/montserrat/900-italic.css">
-<link rel="stylesheet" href="app.css">
+<link rel="stylesheet" href="app.css?v=1795539835252">
 </head>
 <body>
 <header>
@@ -18,7 +18,7 @@
 
 <main id="projekty">
   <aside>
-    <div class="new"><button class="pill red" data-new="reel">+ Nový reel</button><button class="pill" data-new="carousel">+ Nový carousel</button></div>
+    <div class="new"><button class="pill red" data-new="reel">+ Nový reel</button><button class="pill" data-new="carousel">+ Nový carousel</button><button class="pill ghost" id="asideSettings" hidden>⚙ Nastavení (hlas)</button></div>
     <ul id="list"></ul>
   </aside>
   <section id="preview">
@@ -91,6 +91,7 @@
 
 <main id="nastaveni" hidden>
   <div class="setBox">
+    <div class="row"><button class="pill small" id="setBack">← Zpět na projekty</button></div>
     <h2>Nastavení</h2>
     <h3>Realistický hlas (Gemini)</h3>
     <p class="muted" id="keyState"></p>
@@ -126,7 +127,7 @@
   <div class="row"><button id="pickGo" class="pill red">Vytvořit</button><button id="pickCancel" class="pill ghost">Zrušit</button></div>
 </dialog>
 <div id="toast"></div>
-<script type="module" src="local/local-api.js"></script>
-<script type="module" src="app.js"></script>
+<script type="module" src="local/local-api.js?v=1795539835252"></script>
+<script type="module" src="app.js?v=1795539835252"></script>
 </body>
 </html>
