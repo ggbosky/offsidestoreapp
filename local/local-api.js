@@ -2,9 +2,9 @@
 // Same routes as the server, so public/app.js runs unchanged: projects, voice and renders live in IndexedDB.
 import { REELS, CAROUSELS, buildSpec } from "../lib/templates.mjs";
 import { caption } from "../lib/captions.mjs";
-import { analyseVoice } from "./align.js?v=1795540001971";
-import { geminiVoice } from "./tts.js?v=1795540001971";
-import { renderReel, renderCarousel } from "./render-web.js?v=1795540001971";
+import { analyseVoice } from "./align.js?v=1795546289417";
+import { geminiVoice } from "./tts.js?v=1795546289417";
+import { renderReel, renderCarousel } from "./render-web.js?v=1795546289417";
 
 /* ── storage ─────────────────────────────────────────── */
 const dbp = new Promise((ok, bad) => {

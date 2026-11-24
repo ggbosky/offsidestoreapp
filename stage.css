@@ -20,6 +20,7 @@ html, body { background: #000; overflow: hidden; }
   color: transparent; -webkit-text-stroke: 3px rgba(255,255,255,.07); white-space: nowrap; }
 
 .logo { position: absolute; left: 54px; top: 64px; width: 74px; height: 92px; }
+.logo.reel { top: 250px; } /* below Instagram's Reels header (top ~220 px of 1920) */
 .chip { display: inline-block; background: #E30613; color: #fff; font: 800 46px/1 "Montserrat"; padding: 16px 28px; border-radius: 999px; text-transform: uppercase; letter-spacing: .01em; }
 .chip.w { background: #fff; color: #000; }
 

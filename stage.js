@@ -58,8 +58,8 @@ const SCENES = {
   product(s) {
     const it = item(s.item);
     const el = h(`<div class="fill"><div class="photo dim" style="background-image:url('${it.image}')"></div>
-      ${s.num ? `<div class="abs it" style="right:60px;top:60px;font-size:180px">${s.num}</div>` : ""}
-      <div class="abs chip w" style="right:60px;top:${s.num ? 260 : 70}px">${it.price ? it.price + " Kč" : ""}</div>
+      ${s.num ? `<div class="abs it" style="right:60px;top:240px;font-size:180px">${s.num}</div>` : ""}
+      <div class="abs chip w" style="right:60px;top:${s.num ? 440 : 260}px">${it.price ? it.price + " Kč" : ""}</div>
       <div class="abs it code" style="left:64px;top:1230px;font-size:270px;text-shadow:0 10px 40px rgba(0,0,0,.6)">${esc(s.text)}</div>
       <div class="abs chip club" style="left:70px;top:1520px">${esc(s.sub || "")}</div></div>`);
     const ph = el.querySelector(".photo"), code = el.querySelector(".code"), club = el.querySelector(".club");
@@ -119,8 +119,8 @@ const SCENES = {
   },
   poll(s) {
     const its = (s.items || []).map(item);
-    const el = h(`<div class="fill">${dark()}<div class="abs it ttl" style="left:70px;top:170px;font-size:96px">${accent(s.text)}</div>
-      ${its.map((it, i) => `<div class="row" style="top:${470 + i * 285}px"><div class="n">${i + 1}</div><div class="th" style="background-image:url('${it.image}')"></div>
+    const el = h(`<div class="fill">${dark()}<div class="abs it ttl" style="left:70px;top:370px;font-size:96px">${accent(s.text)}</div>
+      ${its.map((it, i) => `<div class="row" style="top:${630 + i * 252}px"><div class="n">${i + 1}</div><div class="th" style="background-image:url('${it.image}')"></div>
         <div><div class="t">${esc(it.short || it.name)}</div><div class="s">${esc(it.club || "")}</div></div></div>`).join("")}</div>`);
     const rows = el.querySelectorAll(".row"), ttl = el.querySelector(".ttl");
     return { el, after() { fit(ttl, 940, 260, 96); },
@@ -139,10 +139,10 @@ const SCENES = {
   cta(s) {
     const shop = plain(s.text).replace(/\.cz$/i, "");
     const el = h(`<div class="fill">${dark()}
-      <svg viewBox="0 0 74 92" class="abs big" style="left:465px;top:170px;width:150px;height:186px"><circle cx="10" cy="58" r="10" fill="#fff"/><rect x="30" y="0" width="14" height="92" rx="3" fill="#fff"/><circle cx="64" cy="20" r="10" fill="#E30613"/></svg>
-      <div class="abs" style="left:0;right:0;top:450px;text-align:center"><div class="shop">${CART}<span>${esc(shop)}<b>.CZ</b></span></div></div>
-      <div class="abs it sb" style="left:60px;right:60px;top:640px;text-align:center;font-size:64px">${accent(s.sub || "")}</div>
-      <div class="abs" style="left:0;right:0;top:760px;text-align:center"><span class="chip w">Odkaz máš v profilu ↗</span></div></div>`);
+      <svg viewBox="0 0 74 92" class="abs big" style="left:465px;top:230px;width:150px;height:186px"><circle cx="10" cy="58" r="10" fill="#fff"/><rect x="30" y="0" width="14" height="92" rx="3" fill="#fff"/><circle cx="64" cy="20" r="10" fill="#E30613"/></svg>
+      <div class="abs" style="left:0;right:0;top:510px;text-align:center"><div class="shop">${CART}<span>${esc(shop)}<b>.CZ</b></span></div></div>
+      <div class="abs it sb" style="left:60px;right:60px;top:700px;text-align:center;font-size:64px">${accent(s.sub || "")}</div>
+      <div class="abs" style="left:0;right:0;top:815px;text-align:center"><span class="chip w">Odkaz máš v profilu ↗</span></div></div>`);
     const parts = [el.querySelector(".big"), el.querySelector(".shop").parentElement, el.querySelector(".sb"), el.querySelector(".chip")];
     return { el, after() { const sh = el.querySelector(".shop"); if (sh.offsetWidth > 1000) sh.style.transform = `scale(${1000 / sh.offsetWidth})`; },
       draw(lt) { parts.forEach((p, i) => { const k = back((lt - i * 0.12) / 0.3); p.style.opacity = clamp((lt - i * 0.12) / 0.1); p.style.transform = `translateY(${(1 - k) * 80}px)`; }); } };
@@ -179,7 +179,7 @@ window.loadReel = async (spec, catalog, voice) => {
   await document.fonts.ready;
   const tl = timeline(spec, voice);
   const scenes = spec.scenes.map((s) => { const sc = (SCENES[s.type] || SCENES.hook)(s); sc.el.style.display = "none"; stage.appendChild(sc.el); return sc; });
-  stage.insertAdjacentHTML("beforeend", LOGO);
+  stage.insertAdjacentHTML("beforeend", LOGO.replace('class="logo"', 'class="logo reel"'));
   const cap = h(`<div class="cap" style="top:1250px"></div>`); stage.appendChild(cap);
   const bubble = h(`<div class="bubble" style="display:none"></div>`); stage.appendChild(bubble);
   const masc = makeMascot("sticker"); stage.appendChild(masc);
@@ -254,7 +254,7 @@ window.renderAt = (t) => {
       bubble.textContent = plain(s.say);
       bubble.style.display = "";
       bubble.style.opacity = clamp((lt - 0.15) / 0.15);
-      if (isCta) Object.assign(bubble.style, { left: "120px", right: "", top: "900px", bottom: "" });
+      if (isCta) Object.assign(bubble.style, { left: "120px", right: "", top: "915px", bottom: "" });
       else Object.assign(bubble.style, { left: "", right: "300px", top: "", bottom: "500px" });
     }
   }
