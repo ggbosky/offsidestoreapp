@@ -10,7 +10,7 @@ const FPS = 30, SR = 48000;
 async function openStage(height) {
   const f = document.createElement("iframe");
   Object.assign(f.style, { position: "fixed", left: "-20000px", top: "0", width: "1080px", height: height + "px", border: "0" });
-  f.src = "stage.html?v=1795549930285";
+  f.src = "stage.html?v=1795763483478";
   document.body.appendChild(f);
   await new Promise((ok) => f.addEventListener("load", ok, { once: true }));
   const w = f.contentWindow;
@@ -22,7 +22,7 @@ async function openStage(height) {
 const toDataURL = (blob) => new Promise((ok) => { const r = new FileReader(); r.onload = () => ok(r.result); r.readAsDataURL(blob); });
 const fontCache = new Map(), imgCache = new Map();
 
-// stage.css + only the latin / latin-ext @font-face rules, with the woff2 files inlined
+// stage.css + the @font-face rules (one merged latin + Czech file per face), woff2 inlined
 async function stageCSS(doc) {
   let css = "";
   for (const l of doc.querySelectorAll('link[rel="stylesheet"]')) {
@@ -30,7 +30,7 @@ async function stageCSS(doc) {
     if (!fontCache.has(href)) {
       let text = await fetch(href).then((r) => r.text());
       if (/@font-face/.test(text)) {
-        const blocks = text.split(/(?=\/\*)/).filter((b) => /\/\*[^*]*-latin(-ext)?-/.test(b));
+        const blocks = text.split(/(?=\/\*)/).filter((b) => /@font-face/.test(b));
         text = "";
         for (const b of blocks) {
           const m = b.match(/url\(([^)]+\.woff2)\)/); if (!m) continue;
