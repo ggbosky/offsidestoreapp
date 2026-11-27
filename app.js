@@ -1,3 +1,4 @@
+import { playerSVG } from "./player.js";
 // Studio UI: project list, live preview (stage.html in an iframe), scene editor, voice, caption, render.
 const $ = (s) => document.querySelector(s);
 // On github.io there is no server: web/local-api.js puts an in-browser implementation on window.LOCAL_API.
@@ -17,35 +18,56 @@ let META, CAT = [], P = null, TL = null, playing = false, t0 = 0, tNow = 0, slid
 const frame = $("#frame");
 const post = (m) => frame.contentWindow.postMessage(m, "*");
 const TYPE = { hook: "Háček", product: "Produkt", fact: "Fakt", quiz: "Kvíz", letters: "Písmena", poll: "Anketa", code: "Slevový kód", cta: "Výzva",
-  cover: "Obálka", grid: "Mřížka", promo: "Promo", comment: "Komentáře" };
+  cover: "Obálka", grid: "Mřížka", promo: "Promo", comment: "Komentáře",
+  ghook: "Úvod", gclue: "Nápověda", gcount: "Odpočet", greveal: "Odhalení", gcover: "Obálka" };
+let LIST = [], FILTER = "all";
 
 /* tabs */
 document.querySelectorAll("nav button").forEach((b) => b.onclick = () => {
   document.querySelectorAll("nav button").forEach((x) => x.classList.toggle("on", x === b));
-  for (const t of ["projekty", "katalog", "nastaveni"]) $("#" + t).hidden = b.dataset.tab !== t;
+  for (const t of ["dashboard", "projekty", "katalog", "nastaveni"]) $("#" + t).hidden = b.dataset.tab !== t;
+  if (b.dataset.tab === "dashboard") drawDash();
   if (b.dataset.tab === "nastaveni") drawSettings();
   if (b.dataset.tab === "katalog") drawCatalog();
 });
 
 /* list */
+const fmtDay = (d) => new Date(d + "T12:00").toLocaleDateString("cs-CZ", { weekday: "short", day: "numeric", month: "numeric" });
+const stOf = (p) => p.status === "posted" ? ["posted", "Zveřejněno"] : p.status === "ready" ? ["ready", "Připraveno"] : p.outputs ? ["done", "Vyrenderováno"] : ["", "Koncept"];
 async function loadList() {
-  const list = await api("/api/projects");
-  $("#list").innerHTML = list.map((p) => `<li data-id="${p.id}" class="${P?.id === p.id ? "on" : ""}"><span class="k">${p.kind === "reel" ? "REEL" : "CAROUSEL"}${p.outputs ? " · ✓" : ""}</span>
-    ${esc(p.title)}<small>${new Date(p.updated).toLocaleString("cs-CZ", { day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit" })}</small></li>`).join("") || `<li class="muted">Zatím nic.</li>`;
+  LIST = await api("/api/projects");
+  const q = ($("#search").value || "").trim().toLowerCase();
+  const show = LIST.filter((p) => (!q || p.title.toLowerCase().includes(q)) &&
+    (FILTER === "all" || p.kind === FILTER || (FILTER === "plan" && p.plan) || (FILTER === "done" && (p.outputs || p.status))));
+  if (FILTER === "plan") show.sort((a, b) => a.plan.localeCompare(b.plan));
+  $("#list").innerHTML = show.map((p) => `<li data-id="${p.id}" class="${P?.id === p.id ? "on" : ""}"><span class="k">${p.kind === "reel" ? "REEL" : "CAROUSEL"}${p.outputs ? " · ✓" : ""}</span>${p.plan ? `<span class="when">📅 ${fmtDay(p.plan)}</span>` : ""}
+    ${esc(p.title)}<small>${new Date(p.updated).toLocaleString("cs-CZ", { day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit" })} · ${stOf(p)[1]}</small></li>`).join("") || `<li class="muted">${LIST.length ? "Nic neodpovídá." : "Zatím nic."}</li>`;
   $("#list").querySelectorAll("li[data-id]").forEach((li) => li.onclick = () => open(li.dataset.id));
+  if (!$("#dashboard").hidden) drawDash();
 }
+$("#search").oninput = () => loadList();
+document.querySelectorAll("#filters button").forEach((b) => b.onclick = () => { FILTER = b.dataset.f; document.querySelectorAll("#filters button").forEach((x) => x.classList.toggle("on", x === b)); loadList(); });
+const goTab = (t) => document.querySelector(`nav [data-tab="${t}"]`).click();
 
-async function open(id) { P = await api("/api/projects/" + id); stop(); slide = 0; tNow = 1; draw(); loadList(); }
+async function open(id) { P = await api("/api/projects/" + id); stop(); slide = 0; tNow = 1; if ($("#projekty").hidden) goTab("projekty"); draw(); loadList(); }
 
 /* new project picker */
 let pick = null;
-document.querySelectorAll("[data-new]").forEach((b) => b.onclick = () => {
-  const kind = b.dataset.new, T = kind === "reel" ? META.reels : META.carousels;
-  pick = { kind, template: Object.keys(T)[0], items: [] };
+const usedPlayers = () => LIST.map((p) => p.player).filter(Boolean);
+function openPicker(kind, preset = {}) {
+  const T = kind === "reel" ? META.reels : META.carousels;
+  pick = { kind, template: preset.template || Object.keys(T)[0], items: [], player: preset.player || "" };
   $("#pickTitle").textContent = kind === "reel" ? "Nový reel" : "Nový carousel";
+  $("#pickPlan").value = preset.plan || "";
   const drawPick = () => {
     $("#pickList").innerHTML = Object.entries(T).map(([k, v]) => `<button data-t="${k}" class="${pick.template === k ? "on" : ""}">${esc(v.name)}<small>${esc(v.desc)}</small></button>`).join("");
     $("#pickList").querySelectorAll("button").forEach((x) => x.onclick = () => { pick.template = x.dataset.t; drawPick(); });
+    const guess = pick.template === "uhodni-hrace", used = usedPlayers();
+    $("#pickClubs").hidden = guess; $("#pickPlayers").hidden = !guess;
+    $("#pickHint").textContent = guess ? "Hráč (bez výběru = náhodný, kterého jsi ještě nepoužil):" : "Kluby (nepovinné — jinak se vyberou náhodně):";
+    $("#pickPlayers").innerHTML = [["", "🎲 Náhodný", "nepoužitý"], ...Object.entries(META.players).map(([k, v]) => [k, v.name, `#${v.num} · ${v.nation}${used.includes(k) ? " · použit" : ""}`]), ["custom", "✏️ Vlastní hráč", "vyplníš sám"]]
+      .map(([k, n, d]) => `<button data-p="${k}" class="${pick.player === k ? "on" : ""} ${used.includes(k) ? "used" : ""}">${esc(n)}<small>${esc(d)}</small></button>`).join("");
+    $("#pickPlayers").querySelectorAll("button").forEach((x) => x.onclick = () => { pick.player = x.dataset.p; drawPick(); });
     $("#pickClubs").innerHTML = CAT.filter((c) => c.type === "naramek").map((c) => `<button data-i="${c.id}" class="${pick.items.includes(c.id) ? "on" : ""}">${esc(c.code)} · ${esc(c.short)}</button>`).join("");
     $("#pickClubs").querySelectorAll("button").forEach((x) => x.onclick = () => {
       const i = pick.items.indexOf(x.dataset.i); i >= 0 ? pick.items.splice(i, 1) : pick.items.push(x.dataset.i); drawPick(); });
@@ -53,11 +75,17 @@ document.querySelectorAll("[data-new]").forEach((b) => b.onclick = () => {
   };
   drawPick();
   $("#picker").showModal();
-});
+}
+async function createProject(body, plan) {
+  let x = await api("/api/projects", { method: "POST", body: { ...body, used: usedPlayers() } });
+  if (plan) x = await api("/api/projects/" + x.id, { method: "PUT", body: { plan } });
+  return x;
+}
+document.querySelectorAll("[data-new]").forEach((b) => b.onclick = () => openPicker(b.dataset.new));
 $("#pickCancel").onclick = () => $("#picker").close();
 $("#pickGo").onclick = () => busy($("#pickGo"), async () => {
-  P = await api("/api/projects", { method: "POST", body: { ...pick, word: $("#pickWord").value } });
-  $("#picker").close(); slide = 0; tNow = 1; draw(); loadList();
+  P = await createProject({ ...pick, word: $("#pickWord").value }, $("#pickPlan").value);
+  $("#picker").close(); slide = 0; tNow = 1; goTab("projekty"); draw(); loadList();
 });
 
 /* editor */
@@ -71,6 +99,9 @@ const fields = (s, i) => {
     ${s.bubble !== undefined ? `<label>Bublina maskota<input data-k="bubble" value="${esc(s.bubble)}"></label>` : ""}
     ${isReel ? `<div class="two"><label>Hlas říká<input data-k="say" value="${esc(s.say || "")}"></label><label>Délka (s)<input data-k="dur" type="number" step="0.1" value="${s.dur || 2}"></label></div>` : ""}
     ${s.item !== undefined ? `<label>Produkt<select data-k="item">${opt(s.item)}</select></label>` : ""}
+    ${s.type === "greveal" && P.spec.player ? `<div class="three"><label>Číslo dresu<input data-pk="num" value="${esc(P.spec.player.num)}"></label>
+      <label>Barva dresu<input data-pk="c0" type="color" value="${esc(P.spec.player.colors?.[0] || "#E30613")}"></label>
+      <label>Barva lemu<input data-pk="c1" type="color" value="${esc(P.spec.player.colors?.[1] || "#FFFFFF")}"></label></div>` : ""}
   </div>`;
 };
 
@@ -79,6 +110,8 @@ function draw() {
   if (!P) return;
   const reel = P.kind === "reel";
   $("#title").value = P.title;
+  $("#plan").value = P.plan || ""; $("#status").value = P.status || "";
+  $("#rebuild").textContent = P.template === "uhodni-hrace" ? "↻ Jiný hráč" : "↻ Jiné kluby";
   const list = reel ? P.spec.scenes : P.spec.slides;
   $("#items").innerHTML = list.map(fields).join("");
   $("#items").querySelectorAll(".item").forEach((el) => {
@@ -93,6 +126,12 @@ function draw() {
           save(true); draw(); return;
         }
       }
+      save(); refresh();
+    });
+    el.querySelectorAll("[data-pk]").forEach((inp) => inp.oninput = () => {
+      const pl = P.spec.player, k = inp.dataset.pk;
+      if (k === "num") pl.num = inp.value.replace(/\D/g, "").slice(0, 2);
+      else { pl.colors = [...(pl.colors || ["#E30613", "#FFFFFF"])]; pl.colors[k === "c0" ? 0 : 1] = inp.value; }
       save(); refresh();
     });
     el.querySelectorAll("[data-act]").forEach((b) => b.onclick = () => {
@@ -137,10 +176,13 @@ function refresh() {
 window.addEventListener("message", (e) => { if (e.data?.cmd === "tl") { TL = e.data.tl; tNow = Math.min(tNow, TL.total); showTime(); } });
 
 $("#title").oninput = () => { P.title = $("#title").value; save(); };
+$("#plan").onchange = async () => { P.plan = $("#plan").value || null; await api("/api/projects/" + P.id, { method: "PUT", body: { plan: P.plan } }); loadList(); toast(P.plan ? "Naplánováno na " + fmtDay(P.plan) : "Bez termínu"); };
+$("#status").onchange = async () => { P.status = $("#status").value || null; await api("/api/projects/" + P.id, { method: "PUT", body: { status: P.status } }); loadList(); };
+$("#dup").onclick = () => busy($("#dup"), async () => { P = await api(`/api/projects/${P.id}/duplicate`, { method: "POST" }); draw(); loadList(); toast("Zkopírováno"); });
 $("#mOn").onchange = () => { P.spec.mascot = { ...P.spec.mascot, on: $("#mOn").checked }; save(); refresh(); };
 $("#mBubble").onchange = () => { P.spec.mascot = { ...P.spec.mascot, bubble: $("#mBubble").checked }; save(); refresh(); };
 $("#sound").onchange = () => { P.spec.sound = $("#sound").checked ? "hits" : "none"; save(); };
-$("#rebuild").onclick = () => busy($("#rebuild"), async () => { P = await api(`/api/projects/${P.id}/rebuild`, { method: "POST", body: {} }); draw(); });
+$("#rebuild").onclick = () => busy($("#rebuild"), async () => { P = await api(`/api/projects/${P.id}/rebuild`, { method: "POST", body: { used: usedPlayers() } }); draw(); loadList(); });
 $("#del").onclick = async () => { if (!confirm("Smazat projekt „" + P.title + "“ i s vyrenderovanými soubory?")) return; await api("/api/projects/" + P.id, { method: "DELETE" }); P = null; draw(); loadList(); };
 
 /* playback */
@@ -235,7 +277,7 @@ const start = async () => {
   META = await api("/api/meta");
   await loadCat();
   await loadList();
-  const first = $("#list li[data-id]"); if (first) open(first.dataset.id);
+  drawDash();
 };
 // the stage iframe may finish loading before this module runs (always on the static build)
 if (frame.contentWindow?.ready) start(); else frame.addEventListener("load", start);
@@ -273,3 +315,56 @@ if (WEB) {
     toast("Klíč funguje ✓");
   });
 }
+
+/* ───────── dashboard ───────── */
+const iso = (d) => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+const days7 = () => [...Array(7)].map((_, i) => { const d = new Date(); d.setDate(d.getDate() + i); return iso(d); });
+const TPL = () => [...Object.entries(META.reels).map(([k, v]) => ["reel", k, v]), ...Object.entries(META.carousels).map(([k, v]) => ["carousel", k, v])];
+function drawDash() {
+  if (!META) return;
+  const today = iso(new Date()), week = days7();
+  $("#dToday").textContent = new Date().toLocaleDateString("cs-CZ", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  const n = (f) => LIST.filter(f).length;
+  const planned = n((p) => p.plan && p.plan >= today && p.plan <= week[6]);
+  const used = new Set(usedPlayers()), total = Object.keys(META.players).length;
+  const kpi = (v, l, bar) => `<div class="kpi"><b>${v}</b><span>${l}</span>${bar != null ? `<div class="bar"><i style="width:${Math.round(bar * 100)}%"></i></div>` : ""}</div>`;
+  $("#dKpis").innerHTML = kpi(LIST.length, "projektů celkem") + kpi(n((p) => p.kind === "reel"), "reelů") + kpi(n((p) => p.kind === "carousel"), "carouselů") +
+    kpi(n((p) => p.outputs), "vyrenderováno", LIST.length ? n((p) => p.outputs) / LIST.length : 0) + kpi(`${planned}/5`, "naplánováno na 7 dní", Math.min(1, planned / 5)) +
+    kpi(n((p) => p.status === "posted"), "zveřejněno") + kpi(`${used.size}/${total}`, "hráčů v sérii", used.size / total);
+  // week
+  $("#dPlan").innerHTML = week.map((d) => {
+    const items = LIST.filter((p) => p.plan === d);
+    return `<div class="day ${d === today ? "today" : ""}"><h4>${new Date(d + "T12:00").toLocaleDateString("cs-CZ", { weekday: "short" })}<small>${new Date(d + "T12:00").toLocaleDateString("cs-CZ", { day: "numeric", month: "numeric" })}</small></h4>
+      ${items.map((p) => `<div class="pj" data-id="${p.id}"><span class="k">${p.kind === "reel" ? "REEL" : "CAROUSEL"}</span>${esc(p.title)}<br><span class="st ${stOf(p)[0]}">${stOf(p)[1]}</span></div>`).join("")}
+      <button class="add" data-d="${d}">+ přidat</button></div>`;
+  }).join("");
+  $("#dPlan").querySelectorAll(".add").forEach((b) => b.onclick = () => openPicker("reel", { plan: b.dataset.d }));
+  // players
+  $("#dSeries").textContent = `${used.size} z ${total} použito · klikni a vytvoř reel`;
+  $("#dPlayers").innerHTML = Object.entries(META.players).map(([k, v]) => `<div class="pl ${used.has(k) ? "used" : ""}" data-p="${k}" title="${used.has(k) ? "Už jsi použil — klikni pro další video" : "Vytvořit reel"}">
+    <div class="av">${playerSVG({ jersey: v.colors[0], trim: v.colors[1], num: v.num, mystery: !used.has(k) })}</div>${used.has(k) ? esc(v.name) : "???"}<small>${used.has(k) ? "✓ použit" : `#${v.num} · ${v.nation}`}</small></div>`).join("");
+  $("#dPlayers").querySelectorAll(".pl").forEach((el) => el.onclick = () => busy(el, async () => {
+    P = await createProject({ kind: "reel", template: "uhodni-hrace", player: el.dataset.p }); goTab("projekty"); slide = 0; tNow = 1; draw(); loadList(); toast("Reel vytvořen");
+  }));
+  // recent
+  $("#dRecent").innerHTML = LIST.slice(0, 7).map((p) => `<div class="pj" data-id="${p.id}"><span><span class="k">${p.kind === "reel" ? "REEL" : "CAROUSEL"}${p.plan ? " · 📅 " + fmtDay(p.plan) : ""}</span>${esc(p.title)}</span><span class="st ${stOf(p)[0]}">${stOf(p)[1]}</span></div>`).join("") || `<p class="muted">Zatím žádné projekty. Začni třeba „Uhodni hráče“ nebo naplánuj celý týden.</p>`;
+  document.querySelectorAll("#dashboard .pj[data-id]").forEach((el) => el.onclick = () => open(el.dataset.id));
+  // templates
+  $("#dTpls").innerHTML = TPL().map(([kind, k, v]) => `<button class="tpl" data-kind="${kind}" data-t="${k}"><span class="k">${kind === "reel" ? "REEL" : "CAROUSEL"}</span>${esc(v.name)}<small>${esc(v.desc)}</small></button>`).join("");
+  $("#dTpls").querySelectorAll(".tpl").forEach((b) => b.onclick = () => openPicker(b.dataset.kind, { template: b.dataset.t }));
+}
+$("#dGuess").onclick = () => openPicker("reel", { template: "uhodni-hrace" });
+// one click: a balanced week of content on the free days (3 reels + 2 carousels, two of them "Uhodni hráče")
+const WEEK_MIX = [["reel", "uhodni-hrace"], ["carousel", "nejsou-pro-kazdeho"], ["reel", "poznas-klub"], ["carousel", "uhodni-hrace"], ["reel", "nos-klub"]];
+$("#dWeek").onclick = () => busy($("#dWeek"), async () => {
+  const week = days7(), busyDays = new Set(LIST.map((p) => p.plan));
+  const free = [1, 2, 3, 4, 5, 6, 0].map((i) => week[i]).filter((d) => d && !busyDays.has(d)).slice(0, 5);
+  if (!free.length) return toast("Celý týden už je naplánovaný");
+  if (!confirm(`Vytvořit ${free.length} projektů na volné dny (${free.map(fmtDay).join(", ")})?`)) return;
+  for (let i = 0; i < free.length; i++) {
+    const [kind, template] = WEEK_MIX[i % WEEK_MIX.length];
+    await createProject({ kind, template }, free[i]);
+    await loadList();
+  }
+  toast(`Naplánováno ${free.length} příspěvků`);
+});

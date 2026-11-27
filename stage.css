@@ -59,3 +59,19 @@ html, body { background: #000; overflow: hidden; }
 .ticket { position: absolute; left: 90px; right: 90px; border: 8px dashed #fff; border-radius: 46px; text-align: center; padding: 70px 40px; }
 .shop { display: inline-flex; align-items: center; gap: 24px; border: 6px solid #E30613; border-radius: 999px; padding: 22px 46px; font: 900 italic 70px/1 "Montserrat"; }
 .shop b { color: #E30613; }
+
+/* "Uhodni hráče" */
+.pav { position: absolute; filter: drop-shadow(0 30px 50px rgba(0,0,0,.55)); }
+.pav svg { width: 100%; height: auto; display: block; }
+.pav.myst { filter: drop-shadow(0 0 40px rgba(227,6,19,.35)); }
+.glow { position: absolute; left: 50%; top: 38%; width: 1200px; height: 1200px; transform: translate(-50%,-50%);
+  background: radial-gradient(circle, rgba(227,6,19,.28) 0%, rgba(227,6,19,0) 60%); }
+.glow.on { background: radial-gradient(circle, rgba(255,255,255,.22) 0%, rgba(227,6,19,.18) 35%, rgba(227,6,19,0) 62%); }
+.gcard { position: absolute; left: 60px; right: 60px; display: flex; align-items: center; gap: 26px; padding: 0 28px;
+  background: #16161a; border: 2px solid #2a2a30; border-radius: 26px; }
+.gcard.cur { background: #fff; color: #000; border-color: #fff; box-shadow: 0 24px 60px rgba(0,0,0,.5); }
+.gic { flex: none; width: 96px; height: 96px; border-radius: 22px; background: #E30613; display: grid; place-items: center; }
+.gic svg { width: 62px; height: 62px; }
+.gtx { min-width: 0; flex: 1; }
+.glab { font: 800 26px Montserrat; letter-spacing: .12em; opacity: .6; }
+.gval { font: 900 italic 46px/1.12 Montserrat; text-transform: uppercase; margin-top: 6px; }

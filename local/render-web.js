@@ -10,7 +10,7 @@ const FPS = 30, SR = 48000;
 async function openStage(height) {
   const f = document.createElement("iframe");
   Object.assign(f.style, { position: "fixed", left: "-20000px", top: "0", width: "1080px", height: height + "px", border: "0" });
-  f.src = "stage.html?v=1795763483478";
+  f.src = "stage.html?v=1795794210117";
   document.body.appendChild(f);
   await new Promise((ok) => f.addEventListener("load", ok, { once: true }));
   const w = f.contentWindow;
@@ -64,7 +64,7 @@ function makeRaster(stage, css, width, height) {
     let html = "";
     for (const el of stage.children) if (el.style.display !== "none") html += ser.serializeToString(el);
     // absolute → inlined images
-    const found = [...html.matchAll(/url\((?:&quot;|'|")?([^"')&]+)(?:&quot;|'|")?\)/g)].map((m) => m[1]).filter((u) => !u.startsWith("data:"));
+    const found = [...html.matchAll(/url\((?:&quot;|'|")?([^"')&]+)(?:&quot;|'|")?\)/g)].map((m) => m[1]).filter((u) => !u.startsWith("data:") && !u.startsWith("#"));
     for (const u of new Set(found)) html = html.split(u).join(await inlineImage(new URL(u, base).href));
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><foreignObject x="0" y="0" width="100%" height="100%">` +
       `<div xmlns="http://www.w3.org/1999/xhtml"><style>${css}</style><div id="stage" class="${stage.className}">${html}</div></div></foreignObject></svg>`;

@@ -2,6 +2,7 @@
 // Carousels: window.loadSlides(spec, catalog) → count, window.showSlide(i).
 // Every frame is computed from t alone, so headless capture is deterministic.
 import { mascotSVG, poseMascot } from "./mascot.js";
+import { playerSVG, clueIcon } from "./player.js";
 
 const stage = document.getElementById("stage");
 const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
@@ -17,7 +18,7 @@ const dark = () => `<div class="darkpat"><div class="pat">${PAT}</div></div>`;
 const studio = () => `<div class="studio"><div class="pat">${PAT}</div><div class="fade"></div></div>`;
 const CART = `<svg viewBox="0 0 24 24" width="64" height="64" fill="none" stroke="#E30613" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h2.5l2.2 11h10.6l2-8H7"/><circle cx="9.5" cy="19.5" r="1.4"/><circle cx="17" cy="19.5" r="1.4"/></svg>`;
 
-let CAT = [];
+let CAT = [], SPEC = null;
 const item = (id) => CAT.find((i) => i.id === id) || {};
 
 // shrink font until the box fits (words never overflow the width)
@@ -47,9 +48,90 @@ function makeMascot(cls = "") {
   return el;
 }
 
+
+/* ───────── "Uhodni hráče" (guess the player) — shared by reels (H 1920) and carousels (H 1350) ───────── */
+const pts = (n) => `${n} ${n === 1 ? "BOD" : n < 5 ? "BODY" : "BODŮ"}`;
+const pl = () => SPEC?.player || {};
+const avatar = (mystery, extra = "") => `<div class="pav${mystery ? " myst" : ""}" ${extra}>${playerSVG({ jersey: pl().colors?.[0], trim: pl().colors?.[1], num: pl().num, mystery })}</div>`;
+const clueList = () => (SPEC?.scenes || SPEC?.slides || []).filter((x) => x.type === "gclue");
+function clueCard(c, k, cur, total) {
+  return `<div class="gcard${cur ? " cur" : ""}" data-k="${k}"><div class="gic">${clueIcon(c.icon)}</div>
+    <div class="gtx"><div class="glab">${k + 1}/${total} · ${esc(plain(c.text))}</div><div class="gval">${esc(c.sub || "")}</div></div></div>`;
+}
+const GUESS = {
+  hook(s, H) {
+    const slide = H < 1500;
+    const el = h(`<div class="fill">${dark()}<div class="glow"></div>
+      ${avatar(true, `style="left:${slide ? 300 : 230}px;top:${slide ? 130 : 330}px;width:${slide ? 480 : 620}px"`)}
+      <div class="abs it t" style="left:70px;top:${slide ? 690 : 1060}px;text-align:center">${wordsHTML(s.text)}</div>
+      <div class="abs" style="left:0;right:0;top:${slide ? 955 : 1370}px;text-align:center"><span class="chip w gsub">${esc(s.sub || "")}</span></div></div>`);
+    const av = el.querySelector(".pav"), sub = el.querySelector(".gsub");
+    return { el, after() { fit(el.querySelector(".t"), 940, slide ? 250 : 280, 150); },
+      draw(lt) {
+        el.querySelectorAll(".w").forEach((w, i) => { const p = back((lt - 0.15 - i * 0.1) / 0.28); w.style.opacity = clamp((lt - 0.15 - i * 0.1) / 0.08); w.style.transform = `scale(${1.5 - 0.5 * p})`; });
+        const a = back(lt / 0.5); av.style.transform = `translateY(${(1 - a) * 300 + Math.sin(lt * 2.4) * 10}px) rotate(${Math.sin(lt * 1.7) * 2}deg)`; av.style.opacity = clamp(lt / 0.2);
+        sub.style.opacity = clamp((lt - 0.7) / 0.2); sub.style.transform = `translateY(${(1 - ease((lt - 0.7) / 0.3)) * 40}px)`;
+      } };
+  },
+  clue(s, H) {
+    const slide = H < 1500, all = clueList(), k = Math.max(0, all.indexOf(s)), n = all.length || 5, left = n - k;
+    const top = slide ? 480 : 650, step = slide ? 156 : 168;
+    const el = h(`<div class="fill">${dark()}
+      <div class="abs" style="left:0;right:0;top:${slide ? 70 : 270}px;text-align:center"><span class="chip w">NÁPOVĚDA ${k + 1}/${n} · ZA ${pts(left)}</span></div>
+      ${avatar(true, `style="left:${slide ? 420 : 390}px;top:${slide ? 165 : 370}px;width:${slide ? 240 : 300}px"`)}
+      ${slide ? "" : `<svg class="abs gring" viewBox="0 0 120 120" style="right:60px;top:380px;width:190px;height:190px"><circle cx="60" cy="60" r="52" fill="#111" stroke="#2a2a30" stroke-width="10"/>
+        <circle class="arc" cx="60" cy="60" r="52" fill="none" stroke="#E30613" stroke-width="10" stroke-linecap="round" stroke-dasharray="327" transform="rotate(-90 60 60)"/>
+        <text x="60" y="70" text-anchor="middle" font-family="Montserrat" font-weight="900" font-style="italic" font-size="44" fill="#fff">${left}</text>
+        <text x="60" y="94" text-anchor="middle" font-family="Montserrat" font-weight="800" font-size="13" fill="#bbb" letter-spacing="1">${left === 1 ? "BOD" : left < 5 ? "BODY" : "BODŮ"}</text></svg>`}
+      <div class="gcards">${all.slice(0, k + 1).map((c, j) => clueCard(c, j, j === k, n)).join("")}</div></div>`);
+    const cards = [...el.querySelectorAll(".gcard")], arc = el.querySelector(".arc");
+    cards.forEach((c, j) => Object.assign(c.style, { top: (top + j * step) + "px", height: (step - 18) + "px" }));
+    return { el, after() { el.querySelectorAll(".gval").forEach((v) => fit(v, slide ? 770 : 760, step - 70, 46, 24)); },
+      draw(lt, dur = 3) {
+        const c = cards[cards.length - 1], p = back(lt / 0.4);
+        c.style.transform = `translateX(${(1 - p) * 1100}px)`;
+        if (arc) arc.style.strokeDashoffset = String(327 * clamp(lt / Math.max(0.5, dur - 0.2)));
+      } };
+  },
+  count(s, H) {
+    const el = h(`<div class="fill">${dark()}<div class="glow"></div>
+      ${avatar(true, `style="left:290px;top:420px;width:500px;opacity:.35"`)}
+      <div class="abs it t" style="left:70px;top:300px;text-align:center">${accent(s.text)}</div>
+      <div class="abs it gnum" style="left:0;right:0;top:760px;text-align:center;font-size:420px;line-height:1">3</div>
+      <div class="abs" style="left:0;right:0;top:1280px;text-align:center"><span class="chip w">${esc(s.sub || "Napiš jméno do komentářů")}</span></div></div>`);
+    const num = el.querySelector(".gnum"), av = el.querySelector(".pav");
+    return { el, after() { fit(el.querySelector(".t"), 940, 220, 150); },
+      draw(lt, dur = 3) {
+        const step = Math.max(0.6, (dur - 0.3) / 3), i = Math.min(2, Math.floor(lt / step)), f = (lt - i * step) / step;
+        num.textContent = String(3 - i); num.style.transform = `scale(${1.6 - 0.6 * back(f / 0.35)})`; num.style.opacity = String(1 - clamp((f - 0.75) / 0.25) * 0.7);
+        num.classList.toggle("red", i === 2);
+        av.style.transform = `translateX(${Math.sin(lt * 40) * (i === 2 ? 6 : 2)}px)`;
+      } };
+  },
+  reveal(s, H) {
+    const slide = H < 1500;
+    const el = h(`<div class="fill">${dark()}<div class="glow on"></div>
+      ${slide ? `<div class="abs" style="left:0;right:0;top:70px;text-align:center"><span class="chip">ODPOVĚĎ</span></div>` : ""}
+      ${avatar(false, `style="left:${slide ? 280 : 230}px;top:${slide ? 160 : 300}px;width:${slide ? 520 : 620}px"`)}
+      <div class="abs" style="left:70px;width:940px;top:${slide ? 760 : 1010}px;display:flex;flex-direction:column;align-items:center;gap:30px">
+        <div class="it t" style="text-align:center">${esc(plain(s.text))}</div>
+        <div class="gfact" style="width:880px;text-align:center;font:700 44px/1.3 Montserrat">${accent(s.sub || "")}</div></div>
+      <div class="abs flash" style="inset:0;background:#fff;opacity:0"></div></div>`);
+    const av = el.querySelector(".pav"), t = el.querySelector(".t"), fct = el.querySelector(".gfact"), fl = el.querySelector(".flash");
+    return { el, after() { fit(t, 940, slide ? 190 : 240, 140); },
+      draw(lt) {
+        fl.style.opacity = String(0.9 * (1 - clamp(lt / 0.35)));
+        const a = back(lt / 0.45); av.style.transform = `scale(${0.6 + 0.4 * a}) rotate(${(1 - a) * -8}deg)`;
+        const b = back((lt - 0.25) / 0.35); t.style.opacity = clamp((lt - 0.25) / 0.1); t.style.transform = `scale(${1.4 - 0.4 * b})`;
+        fct.style.opacity = clamp((lt - 0.7) / 0.25);
+      } };
+  },
+};
+
 /* ───────────────────────── REELS ───────────────────────── */
 let R = null;
 const SCENES = {
+  ghook: (s) => GUESS.hook(s, 1920), gclue: (s) => GUESS.clue(s, 1920), gcount: (s) => GUESS.count(s, 1920), greveal: (s) => GUESS.reveal(s, 1920),
   hook(s) {
     const el = h(`<div class="fill">${dark()}<div class="abs it" style="left:70px;top:0;text-align:center">${wordsHTML(s.text)}</div></div>`);
     return { el, after() { const t = el.querySelector(".it"); fit(t, 940, 900, 170); t.style.top = (840 - t.offsetHeight / 2) + "px"; },
@@ -173,7 +255,7 @@ function timeline(spec, voice) {
 }
 
 window.loadReel = async (spec, catalog, voice) => {
-  CAT = catalog;
+  CAT = catalog; SPEC = spec;
   stage.className = "";
   stage.innerHTML = "";
   await document.fonts.ready;
@@ -231,7 +313,7 @@ window.renderAt = (t) => {
       const rel = cur - s._w[0], grp = groups.find((x) => x.includes(rel)) || [];
       cap.innerHTML = grp.map((k) => `<span class="${k === rel ? "on" : ""}">${esc(say[k].replace(/[,.]$/, ""))}</span>`).join(" ");
       cap.style.display = "";
-      cap.style.top = ({ cta: 900, poll: 1640, code: 1420, letters: 1150 }[s.type] || 1250) + "px";
+      cap.style.top = ({ cta: 900, poll: 1640, code: 1420, letters: 1150, ghook: 1500, gclue: 1500, gcount: 1440, greveal: 1420 }[s.type] || 1250) + "px";
     }
   }
 
@@ -249,7 +331,7 @@ window.renderAt = (t) => {
     const talking = s.say && lt < Math.min(dur * 0.75, 0.2 + s.say.length * 0.06);
     open = talking ? Math.abs(Math.sin(t * Math.PI * 5.2)) * 0.8 : 0;
     const norm = (x) => plain(x).toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
-    const adds = !["product", "fact", "quiz", "poll"].includes(s.type) && norm(s.say) !== norm(s.text);
+    const adds = !["product", "fact", "quiz", "poll", "ghook", "gclue", "gcount", "greveal"].includes(s.type) && norm(s.say) !== norm(s.text);
     if (spec.mascot?.bubble && s.say && spec.mascot?.on && !s.noBubble && adds) {
       bubble.textContent = plain(s.say);
       bubble.style.display = "";
@@ -279,6 +361,9 @@ const mascotAt = (left, top, width, bubble, opts = {}) => {
 };
 
 const SLIDES = {
+  gcover(s) { const g = GUESS.hook(s, 1350); g.draw(3); return { el: g.el, extra: () => mascotAt(790, 1070, 250, s.bubble), after: g.after }; },
+  gclue(s) { const g = GUESS.clue(s, 1350); return { el: g.el, after() { g.after(); g.draw(3, 3); } }; },
+  greveal(s) { const g = GUESS.reveal(s, 1350); return { el: g.el, after() { g.after(); g.draw(3); } }; },
   cover(s) {
     const el = h(`<div class="fill">${dark()}<div class="abs it t" style="left:70px;text-align:center">${accent(s.text)}</div></div>`);
     return { el, extra: () => mascotAt(720, 1000, 340, s.bubble), after() { const t = el.querySelector(".t"); fit(t, 940, 640, 150); t.style.top = (500 - t.offsetHeight / 2) + "px"; } };
@@ -339,7 +424,7 @@ const SLIDES = {
 };
 
 window.loadSlides = async (spec, catalog) => {
-  CAT = catalog;
+  CAT = catalog; SPEC = spec;
   stage.className = "slide";
   await document.fonts.ready;
   C = { spec };

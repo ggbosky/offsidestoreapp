@@ -2,9 +2,10 @@
 // Same routes as the server, so public/app.js runs unchanged: projects, voice and renders live in IndexedDB.
 import { REELS, CAROUSELS, buildSpec } from "../lib/templates.mjs";
 import { caption } from "../lib/captions.mjs";
-import { analyseVoice } from "./align.js?v=1795763483479";
-import { geminiVoice } from "./tts.js?v=1795763483479";
-import { renderReel, renderCarousel } from "./render-web.js?v=1795763483479";
+import { PLAYERS } from "../lib/players.mjs";
+import { analyseVoice } from "./align.js?v=1795794210120";
+import { geminiVoice } from "./tts.js?v=1795794210120";
+import { renderReel, renderCarousel } from "./render-web.js?v=1795794210120";
 
 /* ── storage ─────────────────────────────────────────── */
 const dbp = new Promise((ok, bad) => {
@@ -73,7 +74,7 @@ async function route(url, opts) {
   const u = new URL(url, location.href), p = u.pathname.replace(/^.*?\/api\//, "/api/"), m = (opts.method || "GET").toUpperCase();
   const b = opts.body, body = b instanceof Blob ? b : typeof b === "string" ? JSON.parse(b) : b || {};
   let r;
-  if (p === "/api/meta") return { reels: REELS, carousels: CAROUSELS };
+  if (p === "/api/meta") return { reels: REELS, carousels: CAROUSELS, players: PLAYERS };
   if (p === "/api/catalog") return catalog();
   if (p === "/api/catalog/upload" && m === "POST") {
     const own = (await get("uploads")) || [];
@@ -86,20 +87,26 @@ async function route(url, opts) {
   if (p === "/api/projects" && m === "GET") {
     const list = [];
     for (const k of await keys()) if (String(k).startsWith("p:")) {
-      const x = await get(k); list.push({ id: x.id, kind: x.kind, template: x.template, title: x.title, updated: x.updated, outputs: x.outputs ? 1 : null });
+      const x = await get(k); list.push({ id: x.id, kind: x.kind, template: x.template, title: x.title, updated: x.updated, created: x.created, outputs: x.outputs ? 1 : null,
+        plan: x.plan || null, status: x.status || null, player: x.spec?.player?.key || null, voice: !!(await get("v:" + x.id)) });
     }
     return list.sort((a, b) => (b.updated || "").localeCompare(a.updated || ""));
   }
   if (p === "/api/projects" && m === "POST") {
     const cat = await items(), spec = buildSpec(body.kind, body.template, cat, body);
     const id = new Date().toISOString().slice(0, 10) + "-" + body.template + "-" + Math.random().toString(36).slice(2, 6);
-    await saveP({ id, kind: body.kind, template: body.template, title: titleOf(body.kind, body.template), created: new Date().toISOString(), spec, caption: caption(spec, cat) });
+    await saveP({ id, kind: body.kind, template: body.template, title: titleOf(body.kind, body.template) + (spec.player ? " — " + spec.player.name : ""), created: new Date().toISOString(), spec, caption: caption(spec, cat) });
     return full(id);
   }
   if ((r = p.match(/^\/api\/projects\/([\w-]+)$/))) {
     if (m === "GET") return full(r[1]);
-    if (m === "PUT") { const x = await loadP(r[1]); Object.assign(x, { spec: body.spec ?? x.spec, caption: body.caption ?? x.caption, title: body.title ?? x.title }); await saveP(x); return full(r[1]); }
+    if (m === "PUT") { const x = await loadP(r[1]); Object.assign(x, { spec: body.spec ?? x.spec, caption: body.caption ?? x.caption, title: body.title ?? x.title, plan: body.plan !== undefined ? body.plan : x.plan, status: body.status !== undefined ? body.status : x.status }); await saveP(x); return full(r[1]); }
     if (m === "DELETE") { for (const k of await keys()) if (String(k).startsWith("p:" + r[1]) || String(k).includes(":" + r[1])) { await del(k); blobCache.delete(k); } return { ok: true }; }
+  }
+  if ((r = p.match(/^\/api\/projects\/([\w-]+)\/duplicate$/)) && m === "POST") {
+    const x = await loadP(r[1]), id = new Date().toISOString().slice(0, 10) + "-" + x.template + "-" + Math.random().toString(36).slice(2, 6);
+    await saveP({ ...x, id, title: x.title + " (kopie)", created: new Date().toISOString(), outputs: null, plan: null, status: null });
+    return full(id);
   }
   if ((r = p.match(/^\/api\/projects\/([\w-]+)\/rebuild$/)) && m === "POST") {
     const x = await loadP(r[1]), cat = await items();
